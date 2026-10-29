@@ -10,7 +10,8 @@ on what evidence, and how instructors keep improving. Spec v0.2 (experienced-eng
 - **Rules engine:** `src/teachermodel/rules.py` — clearance check, calibration, audit sample,
   quality triggers, coaching cadence, bench readiness, staffing check.
 - **Evidence:** `docs/evidence/` — what was adopted (strong) and deferred (moderate/weak).
-- **Decisions:** `docs/decisions/` (MADR). **Plan:** `docs/plans/phase-plan.md`.
+- **Decisions:** `docs/decisions/` (MADR).
+- **Plan:** `docs/plans/phase-plan.md`.
 - **Hub alignment:** `docs/hub-alignment.md` (hub conventions).
 
 ## Quick start (Windows)
