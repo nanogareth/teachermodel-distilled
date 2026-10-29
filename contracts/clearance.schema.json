@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/clearance@1",
+  "title": "Clearance event payload (W4)",
+  "description": "The decision of two clearers on a candidate (instructor, unit, modes), with the observation events it rests on. References and dates only: reasons stay in the clearers' sign-offs in the private store. A staffing check reads these events (records.clearances). Increment 3 added the optional `scope` (W11: a clearance limited to a partner organisation and/or to regions), an additive change that keeps the @1 id: every earlier @1 payload still validates, and a payload without a scope is unscoped. Decision 0017 added the optional `founding` (true when a clearer decided under the founding waiver, holding no clearance for the unit that day), additive in the same way: a payload without it was decided under the ordinary rule.",
+  "type": "object",
+  "required": ["clearance", "candidate", "instructor", "unit", "modes", "outcome", "conditions", "recheck", "clearers", "observations", "issued", "expires", "framework_version"],
+  "additionalProperties": false,
+  "properties": {
+    "clearance": {"type": "string", "pattern": "^tm:clearance/[0-9a-f]{16}$"},
+    "candidate": {"type": "string", "pattern": "^tm:candidate/[a-z0-9][a-z0-9-]*$"},
+    "instructor": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+    "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+    "modes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["in-person", "remote", "hybrid"]}},
+    "outcome": {"enum": ["cleared", "cleared_with_conditions", "not_yet", "expired", "revoked"]},
+    "conditions": {"type": "array", "items": {"type": "string", "minLength": 1}},
+    "recheck": {"type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "clearers": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^tm:(person|instructor)/[a-z0-9][a-z0-9-]*$"}
+    },
+    "observations": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 8},
+      "description": "Ids of the observation events the decision rests on"
+    },
+    "issued": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "expires": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "framework_version": {"type": "string", "minLength": 1},
+    "founding": {
+      "const": true,
+      "description": "Optional, additive within major 1 (decision 0017). Present only when at least one of the two clearers held no clearance for the unit on the day they decided: a founding round, allowed while fewer than two calibrated clearers other than the instructor hold the unit. Absent means the ordinary rule."
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Optional, additive within major 1 (decision 0014, W11). Who and where the clearance covers; absent means unscoped. A staffing check honours it: a scoped clearance does not cover other partners or regions.",
+      "properties": {
+        "partner": {"type": "string", "pattern": "^tm:org/[a-z0-9][a-z0-9-]*$"},
+        "regions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^[A-Z]{2}(-[A-Z0-9]{1,3})?$"},
+          "description": "ISO 3166-1 alpha-2, optionally with an ISO 3166-2 subdivision (IE, US-CA)"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"outcome": {"enum": ["cleared", "cleared_with_conditions"]}}, "required": ["outcome"]},
+      "then": {"properties": {"observations": {"minItems": 1}}}
+    },
+    {
+      "if": {"properties": {"outcome": {"const": "cleared_with_conditions"}}, "required": ["outcome"]},
+      "then": {"properties": {"conditions": {"minItems": 1}, "recheck": {"type": "string"}}}
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+# Retention per data category and purpose (tm:contract/retention@2). Spec v0.2, Privacy, consent and
+# fairness: Retention; privacy-jurisdictions design section 3; decision 0010.
+# No entries until the programme owner sets them on legal advice (setup step tm:step/retention-periods).
+# The privacy notice refuses to render, and no approval page is built, while `entries` is empty.
+schema_version: 2
+status: draft
+basis: "periods set with legal advice (spec, Privacy: Retention)"
+entries: []

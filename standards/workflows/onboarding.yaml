@@ -1,0 +1,90 @@
+# W1 Onboarding and pathway workflow (tm:contract/workflows@1). Spec: docs/specs/2026-10-24-workflow-automation-design.md §3, §8.
+# Event kinds in done_when: signoff (declared in event_kinds below). Human steps complete on a `signoff` event {step: <id>}.
+# Each instructor step that waits for a notice also needs the approved notice variant of the instructor's jurisdiction
+# (tm:step/variant-approved; vacuous for a base-profile jurisdiction, unmet while the jurisdiction is unknown).
+# due {days} values are operational defaults (decision 0002), not evidence-based thresholds.
+schema_version: 1
+id: tm:standards/workflows-onboarding
+status: draft
+workflows:
+  - id: tm:workflow/onboarding
+    name: W1 Onboarding and pathway
+    basis: "instructor-development-spec-v0.2 W1 Onboarding and pathway; workflow-automation-design §8 row W1"
+    event_kinds: [signoff]
+    steps:
+      - id: tm:step/commitment-manager
+        name: Protected teaching time confirmed by manager
+        type: human
+        role: manager
+        subject: instructor
+        applies_to: {type: [sme-engineer]}
+        needs: [tm:step/roster-import, tm:step/notice-sent, tm:step/variant-approved]
+        done_when: {kind: signoff, match: {step: tm:step/commitment-manager}}
+        due: {days: 14, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W1 step 1 (SME engineers)"
+      - id: tm:step/commitment-partner-lead
+        name: Instructor nominated by partner lead
+        type: human
+        role: partner-lead
+        subject: instructor
+        applies_to: {type: [partner]}
+        needs: [tm:step/roster-import, tm:step/notice-sent, tm:step/variant-approved]
+        done_when: {kind: signoff, match: {step: tm:step/commitment-partner-lead}}
+        due: {days: 14, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W1 step 1 (partners)"
+      - id: tm:step/baseline-self-assessment
+        name: Baseline self-assessment
+        type: human
+        role: instructor
+        subject: instructor
+        needs: [tm:step/roster-import, tm:step/notice-sent, tm:step/variant-approved, tm:step/commitment-manager, tm:step/commitment-partner-lead]
+        done_when: {kind: signoff, match: {step: tm:step/baseline-self-assessment}}
+        due: {days: 14, basis: operational default}
+        page: self_assessment
+        basis: "instructor-development-spec-v0.2 W1 step 2; framework domains and rubric anchors"
+      - id: tm:step/train-the-trainer
+        name: Train-the-trainer completion recorded
+        type: human
+        role: coordinator
+        subject: instructor
+        applies_to: {level: [shadow, co-deliver]}
+        needs: [tm:step/baseline-self-assessment]
+        done_when: {kind: signoff, match: {step: tm:step/train-the-trainer}}
+        due: {days: 60, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W1 step 3"
+      - id: tm:step/shadow-delivery
+        name: Shadow delivery recorded
+        type: human
+        role: coordinator
+        subject: instructor
+        applies_to: {level: [shadow, co-deliver]}
+        needs: [tm:step/train-the-trainer]
+        done_when: {kind: signoff, match: {step: tm:step/shadow-delivery}}
+        due: {days: 30, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W1 step 4"
+      - id: tm:step/co-delivery
+        name: Co-delivery recorded
+        type: human
+        role: coordinator
+        subject: instructor
+        applies_to: {level: [shadow, co-deliver]}
+        needs: [tm:step/shadow-delivery]
+        done_when: {kind: signoff, match: {step: tm:step/co-delivery}}
+        due: {days: 30, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W1 step 5 (co-instructor notes are an observation)"
+      - id: tm:step/lead-observed-level
+        name: Level change to lead-observed
+        type: human
+        role: head-of-training
+        subject: instructor
+        applies_to: {level: [shadow, co-deliver]}
+        needs: [tm:step/co-delivery, tm:step/commitment-manager, tm:step/commitment-partner-lead]
+        done_when: {kind: signoff, match: {step: tm:step/lead-observed-level}}
+        due: {days: 7, basis: operational default}
+        page: batch_approve
+        basis: "instructor-development-spec-v0.2 W1 step 6; level moves only by decision"

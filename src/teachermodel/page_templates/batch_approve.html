@@ -1,0 +1,29 @@
+<section class="card">
+<h2>What you are approving</h2>
+$intro_html
+$inputs_html
+</section>
+<section class="card">
+<h2>Changed since the last approval ($changed_count)</h2>
+$changed_rows_html
+</section>
+<section class="card">
+<h2>Unchanged ($unchanged_count)</h2>
+<label class="check"><input type="checkbox" id="tm-approve-unchanged"> Approve all unchanged rows</label>
+<details>
+<summary>Show unchanged rows</summary>
+$unchanged_rows_html
+</details>
+</section>
+<section class="card">
+<h2>Your answer</h2>
+$fields_html
+<div class="field">
+<label for="tm-decision">Decision <span class="req" aria-hidden="true">*</span></label>
+<select id="tm-decision" data-decision>
+<option value="">-- choose --</option>
+<option value="approve">Approve</option>
+<option value="changes">Request changes</option>
+</select>
+</div>
+</section>

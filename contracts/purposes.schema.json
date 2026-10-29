@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/purposes@1",
+  "title": "Purposes of processing (standards/privacy/purposes.yaml)",
+  "description": "Why instructor data is processed, in plain language, with the workflows that serve each purpose, the data categories each uses (ids from setup.data_categories) and the legal basis proposed per jurisdiction. Proposals are for legal to confirm when it verifies a profile; they decide nothing themselves.",
+  "type": "object",
+  "required": ["schema_version", "status", "purposes"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"enum": ["draft", "approved"]},
+    "drafted_by": {"enum": ["human", "ai-assisted"]},
+    "review_notes": {"type": "array", "items": {"type": "string", "minLength": 1}, "description": "Every judgement call, for legal and the head of training to settle"},
+    "purposes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "description", "workflows", "categories"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^tm:purpose/[a-z0-9][a-z0-9-]*$"},
+          "name": {"type": "string", "minLength": 1},
+          "description": {"type": "string", "minLength": 1, "description": "Plain language, as the notice will say it"},
+          "workflows": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^tm:workflow/[a-z0-9][a-z0-9-]*$"},
+            "description": "Workflows that exist now; validate checks each is defined"
+          },
+          "planned_workflows": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^tm:workflow/[a-z0-9][a-z0-9-]*$"},
+            "description": "Workflows not built yet that will serve the purpose; validate does not require them to exist"
+          },
+          "categories": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+            "description": "Data category ids from setup.data_categories"
+          },
+          "proposed_basis": {
+            "type": "object",
+            "propertyNames": {"pattern": "^tm:jurisdiction/[a-z0-9-]+$"},
+            "additionalProperties": {
+              "type": "object",
+              "required": ["basis", "reason", "notice_text"],
+              "additionalProperties": false,
+              "properties": {
+                "basis": {"$ref": "#/$defs/basis"},
+                "reason": {"type": "string", "minLength": 1, "description": "Why this basis, for legal and the head of training. Never printed in the notice"},
+                "notice_text": {"type": "string", "minLength": 1, "description": "What the instructor is told about this purpose's basis, in plain language. The notice prints this field and never `reason`; wording that states what the law requires carries \"(legal review)\""}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "basis": {
+      "enum": ["consent", "contract", "legal-obligation", "vital-interests", "public-task", "legitimate-interests", "disclosed-purpose"],
+      "description": "GDPR Article 6(1) bases, plus disclosed-purpose: a CCPA business or commercial purpose disclosed at collection, used only by overlay profiles (validate refuses it in a base profile). Identical in jurisdiction, purposes and retention (a test pins the equality)"
+    }
+  }
+}

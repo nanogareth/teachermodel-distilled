@@ -1,0 +1,19 @@
+# FICTIONAL fixture for tests of tm:contract/purposes@1.
+schema_version: 1
+status: draft
+purposes:
+  - id: tm:purpose/test-clearance
+    name: Clearance decisions
+    description: Deciding whether an instructor may teach a unit, from observations of their teaching.
+    workflows: [tm:workflow/onboarding]
+    categories: [identity-data, performance-data, record-of-actions]
+    proposed_basis:
+      tm:jurisdiction/xx:
+        basis: legitimate-interests
+        reason: The training function must be able to show that instructors were assessed before teaching.
+        notice_text: Fictional notice sentence for clearance. We use your observations to decide whether you may teach a unit.
+  - id: tm:purpose/test-reuse
+    name: Reuse of a recording in teaching material
+    description: Showing a short clip of an instructor's session as an example to other instructors.
+    workflows: [tm:workflow/setup]
+    categories: [delivery-data]

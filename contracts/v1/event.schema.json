@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/event@1",
+  "title": "Event (append-only actuals log, hub events/ shape)",
+  "type": "object",
+  "required": ["id", "at", "kind", "subject_uri", "actor", "payload", "receipt_sha256"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {"type": "string", "minLength": 8},
+    "at": {"type": "string", "format": "date-time"},
+    "kind": {"enum": ["observation", "dry_run", "clearance", "calibration", "audit", "coaching_cycle", "cpd", "bench_decision", "level_change", "record_access", "correction"]},
+    "subject_uri": {"type": "string", "pattern": "^(tm|sl):[a-z-]+/"},
+    "actor": {"type": "string", "pattern": "^tm:(instructor|person)/"},
+    "payload": {"type": "object"},
+    "receipt_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

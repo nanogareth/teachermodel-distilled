@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/jurisdiction@1",
+  "title": "Privacy profile of one jurisdiction (standards/privacy/jurisdictions/<code>.yaml)",
+  "description": "What the law of one jurisdiction requires of this programme's processing of instructor data. One base profile (the organisation's own jurisdiction) covers everyone; an overlay profile adds the duties of an instructor's own jurisdiction, and the stricter rule holds. Every rule cites a dated source. A profile counts only once internal legal has signed the exact file bytes (decision 0009); the content here is data, never judged by code.",
+  "type": "object",
+  "required": [
+    "schema_version", "id", "codes", "role", "laws", "regulator", "lawful_bases", "consent_valid_in_employment",
+    "notice_elements", "retention_limits", "dpia_triggers", "transfers", "rights", "breach_notification",
+    "sources", "status", "drafted_by", "review_notes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"type": "string", "pattern": "^tm:jurisdiction/[a-z0-9-]+$", "description": "tm:jurisdiction/<code in lower case>, e.g. tm:jurisdiction/us-ca"},
+    "name": {"type": "string", "minLength": 1, "description": "Descriptive title for review pages"},
+    "codes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^[A-Z]{2}(-[A-Z0-9]{1,3})?$"},
+      "description": "ISO 3166-1 alpha-2, optionally with an ISO 3166-2 subdivision (IE, US-CA): the roster jurisdictions this profile covers"
+    },
+    "role": {"enum": ["base", "overlay"]},
+    "scope": {"type": "string", "minLength": 1, "description": "Who and what the profile covers and why it applies, for the review page"},
+    "laws": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": {"name": {"type": "string", "minLength": 1}, "citation": {"type": "string", "minLength": 1}}
+      }
+    },
+    "regulator": {
+      "type": "object",
+      "required": ["name"],
+      "additionalProperties": false,
+      "properties": {"name": {"type": "string", "minLength": 1}, "url": {"type": "string", "format": "uri", "pattern": "^https?://"}}
+    },
+    "lawful_bases": {
+      "type": "object",
+      "description": "The bases the law allows for each purpose. An overlay that adds none (the law has no lawful-basis requirement) is {}",
+      "propertyNames": {"pattern": "^tm:purpose/[a-z0-9][a-z0-9-]*$"},
+      "additionalProperties": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/basis"}}
+    },
+    "consent_valid_in_employment": {
+      "type": "boolean",
+      "description": "Whether consent can be freely given by an employee or contractor here; where false, no purpose may rest on consent"
+    },
+    "notice_elements": {
+      "type": "array",
+      "description": "Mandatory elements of the privacy notice; rendering fails if a notice lacks one",
+      "items": {
+        "type": "object",
+        "required": ["id", "requirement", "citation"],
+        "additionalProperties": false,
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "requirement": {"type": "string", "minLength": 1},
+          "citation": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "notice_timing": {
+      "type": "object",
+      "description": "When the notice must be given",
+      "required": ["rule", "citation"],
+      "additionalProperties": false,
+      "properties": {"rule": {"type": "string", "minLength": 1}, "citation": {"type": "string", "minLength": 1}}
+    },
+    "retention_limits": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "citation"],
+        "additionalProperties": false,
+        "anyOf": [{"required": ["max_months"]}, {"required": ["min_months"]}],
+        "properties": {
+          "category": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "A data category id from setup.data_categories"},
+          "max_months": {"type": "integer", "minimum": 1},
+          "min_months": {"type": "integer", "minimum": 1},
+          "citation": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "dpia_triggers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["criterion", "citation"],
+        "additionalProperties": false,
+        "properties": {"criterion": {"type": "string", "minLength": 1}, "citation": {"type": "string", "minLength": 1}}
+      }
+    },
+    "transfers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["rule", "citation"],
+        "additionalProperties": false,
+        "properties": {"rule": {"type": "string", "minLength": 1}, "citation": {"type": "string", "minLength": 1}}
+      }
+    },
+    "rights": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["right", "citation"],
+        "additionalProperties": false,
+        "properties": {
+          "right": {"type": "string", "minLength": 1},
+          "deadline_days": {"type": "integer", "minimum": 1, "description": "Days allowed to respond; absent when the law sets none"},
+          "citation": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "breach_notification": {
+      "type": "object",
+      "required": ["citation"],
+      "additionalProperties": false,
+      "properties": {
+        "regulator_hours": {"type": "integer", "minimum": 1, "description": "Hours allowed to tell the regulator; absent when the law sets none"},
+        "individuals": {"type": "string", "minLength": 1, "description": "When and how affected individuals must be told"},
+        "citation": {"type": "string", "minLength": 1}
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["title", "url", "accessed"],
+        "additionalProperties": false,
+        "properties": {
+          "title": {"type": "string", "minLength": 1},
+          "url": {"type": "string", "format": "uri", "pattern": "^https?://"},
+          "accessed": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"}
+        }
+      }
+    },
+    "status": {"enum": ["draft", "verified"], "description": "verified is a claim about the file; the proof is legal's sign-off on its bytes (decision 0009)"},
+    "drafted_by": {"enum": ["human", "ai-assisted"]},
+    "review_notes": {"type": "array", "items": {"type": "string", "minLength": 1}, "description": "Every judgement call, for legal to settle"}
+  },
+  "$defs": {
+    "basis": {
+      "enum": ["consent", "contract", "legal-obligation", "vital-interests", "public-task", "legitimate-interests", "disclosed-purpose"],
+      "description": "GDPR Article 6(1) bases, plus disclosed-purpose: a CCPA business or commercial purpose disclosed at collection, used only by overlay profiles (validate refuses it in a base profile). Identical in jurisdiction, purposes and retention (a test pins the equality)"
+    }
+  }
+}

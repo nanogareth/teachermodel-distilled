@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/outcome-import@1",
+  "title": "Outcome import file (hub candidate)",
+  "description": "What an LMS or engagement system exports for `teachermodel import-outcomes`: learner results of deliveries as aggregates only. additionalProperties is false at every level, so any field that could identify a learner (a name, email, id or per-learner score) makes the file invalid and nothing is imported. A hub candidate: when the hub's engagement/ area adopts it, the id moves there.",
+  "type": "object",
+  "required": ["schema", "source", "exported_at", "deliveries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/outcome-import@1"},
+    "source": {"type": "string", "minLength": 1, "description": "The exporting system; copied to each outcome event"},
+    "exported_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "deliveries": {"type": "array", "items": {"$ref": "#/$defs/delivery"}}
+  },
+  "$defs": {
+    "delivery": {
+      "type": "object",
+      "required": ["delivery_ref", "instructor", "unit", "mode", "delivered_on", "learners_assessed", "score", "baseline"],
+      "additionalProperties": false,
+      "properties": {
+        "delivery_ref": {"type": "string", "minLength": 1, "description": "The delivery id or session reference, not a person's name"},
+        "instructor": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+        "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+        "mode": {"enum": ["in-person", "remote", "hybrid"]},
+        "delivered_on": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+        "learners_assessed": {"type": "integer", "minimum": 0},
+        "score": {"type": "number", "minimum": 0},
+        "baseline": {"type": "number", "minimum": 0},
+        "feedback": {"type": "number", "minimum": 0},
+        "feedback_median": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}

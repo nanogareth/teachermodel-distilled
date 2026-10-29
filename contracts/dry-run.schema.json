@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/dry-run@1",
+  "title": "Dry-run event payload (W3)",
+  "description": "One dry run of a candidate (instructor, unit, mode) by a clearer. Carries references, check results and hashes only: the clearer's notes stay in the private store. A run counts only while environment_sha256 equals the hash of the unit's environment, failure catalogue and run sheet (units.environment_sha256). passed means every check passed, a failure from the unit's failure catalogue was injected and handled, and the fallback was exercised.",
+  "type": "object",
+  "required": ["candidate", "instructor", "unit", "mode", "passed", "checks", "failure_injected", "fallback_exercised", "environment_sha256", "signoff_id"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate": {"type": "string", "pattern": "^tm:candidate/[a-z0-9][a-z0-9-]*$"},
+    "instructor": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+    "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+    "mode": {"enum": ["in-person", "remote", "hybrid"]},
+    "passed": {"type": "boolean"},
+    "checks": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"pattern": "^[a-z0-9][a-z0-9_-]*$"},
+      "additionalProperties": {"enum": ["pass", "fail"]},
+      "description": "Checklist item id to result"
+    },
+    "failure_injected": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "description": "The failure_catalogue id that was injected, or null when none was"
+    },
+    "fallback_exercised": {"type": "boolean"},
+    "environment_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "signoff_id": {"type": "string", "pattern": "^[0-9a-f]{16,}$", "description": "The clearer's sign-off that recorded this run"}
+  },
+  "if": {"properties": {"passed": {"const": true}}, "required": ["passed"]},
+  "then": {
+    "properties": {
+      "checks": {"additionalProperties": {"const": "pass"}},
+      "failure_injected": {"type": "string"},
+      "fallback_exercised": {"const": true}
+    }
+  }
+}

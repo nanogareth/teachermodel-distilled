@@ -1,0 +1,32 @@
+# Staffing override workflow (tm:contract/workflows@1). Spec v0.2 Rules ("A rule can block (a staffing assignment to an
+# uncleared instructor) ... Only the head of training can override a block, and every override records a reason");
+# increment-3 plan section J; decisions 0014 (the override subject) and 0015.
+# Event kinds in done_when: signoff (the decision). The workflow also writes `subject` events (an override is a child subject,
+# opened by the command `teachermodel request-override`) and `check` events (the hook of the decision writes {result: granted |
+# declined}, which `staffing.check` reads through records.overrides), so those are declared too.
+#
+# override-decision  the head of training (a person who is not the instructor concerned), approve or reject with a
+#                    reason that stays in the private store. An approved override turns the staffing check from block to ok
+#                    for exactly the instructor, unit, mode, date, partner and region of the request (decision 0018); a rejected one changes nothing. Not
+#                    `bind: input`: the inputs are the request, which cannot change once opened.
+#
+# due {days} is an operational default (decision 0002), not an evidence-based threshold: a delivery is usually days away.
+schema_version: 1
+id: tm:standards/workflows-override
+status: draft
+workflows:
+  - id: tm:workflow/override
+    name: Staffing override
+    basis: "instructor-development-spec-v0.2 Rules (only the head of training can override a block, and every override records a reason); increment-3 plan section J; decisions 0014 and 0015"
+    event_kinds: [signoff, subject, check]
+    steps:
+      - id: tm:step/override-decision
+        name: Staffing override decided by the head of training
+        type: human
+        role: head-of-training
+        subject: override
+        needs: []
+        done_when: {kind: signoff, match: {step: tm:step/override-decision}}
+        due: {days: 3, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 Rules (the head of training overrides a block and records a reason)"

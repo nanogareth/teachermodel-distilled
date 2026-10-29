@@ -1,0 +1,80 @@
+# Fictional example roster: one instructor of each type. No real people; example.com addresses.
+schema: tm:contract/roster@2
+as_of: 2026-10-24
+source: Fictional example for contract tests
+prepared_by: tm:person/programme-coordinator
+instructors:
+  - instructor: tm:instructor/k7m2q
+    identity:
+      name: Example SME Engineer
+      email: sme.engineer@example.com
+      hr_ref: E-00001
+    type: sme-engineer
+    organisation: tm:org/example
+    level: co-deliver
+    languages: [en]
+    regions: [IE, GB]
+    jurisdiction: IE
+    notice: {version: "2026-10", given_on: 2026-10-20}
+    engagement:
+      start: 2025-03-01
+      status: active
+      manager: tm:person/eng-manager-1
+      protected_hours_per_month: 16
+    delivers:
+      - unit: sl:unit/example-agent-loop@1
+        modes: [in-person, hybrid]
+        last_delivered: 2026-09-18
+
+  - instructor: tm:instructor/p3x9d
+    identity:
+      name: Example Professional Instructor
+      email: professional@example.com
+    type: professional
+    organisation: tm:org/example
+    level: cleared
+    languages: [en, fr]
+    regions: [IE, FR]
+    jurisdiction: IE
+    notice: {version: "2026-10", given_on: 2026-10-20}
+    engagement:
+      start: 2024-01-15
+      status: active
+    delivers:
+      - unit: sl:unit/example-agent-loop@1
+        modes: [in-person, remote, hybrid]
+
+  - instructor: tm:instructor/c5w1t
+    identity:
+      name: Example Contract Instructor
+      email: contractor@example.com
+      hr_ref: S-00042
+    type: contractor
+    organisation: tm:org/example-training-ltd
+    level: lead-observed
+    languages: [en]
+    regions: [US-CA]
+    jurisdiction: US-CA
+    notice: {version: "2026-10", given_on: 2026-10-21}
+    engagement:
+      start: 2026-06-01
+      end: 2026-12-31
+      status: active
+      agreement_ref: agreements/c5w1t-2026
+    delivers: []
+
+  - instructor: tm:instructor/r8n4h
+    identity:
+      name: Example Partner Instructor
+      email: partner.instructor@example.com
+    type: partner
+    organisation: tm:org/example-partner
+    level: shadow
+    languages: [de]
+    regions: [DE]
+    jurisdiction: DE
+    notice: {version: "2026-10", given_on: 2026-10-22}
+    engagement:
+      start: 2026-10-01
+      status: active
+      nominated_by: tm:person/partner-lead-1

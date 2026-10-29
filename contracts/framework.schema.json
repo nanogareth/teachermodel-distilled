@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/framework@1",
+  "title": "Competency framework (standards/framework.yaml)",
+  "type": "object",
+  "required": ["schema_version", "id", "version", "status", "domains"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"enum": ["draft", "active", "parked", "retired"]},
+    "domains": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "covers", "basis"],
+        "properties": {"id": {"type": "string", "pattern": "^[a-z][a-z-]*$"}}
+      }
+    }
+  }
+}

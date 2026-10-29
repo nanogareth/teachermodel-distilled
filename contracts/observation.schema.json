@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/observation@2",
+  "title": "Observation event payload",
+  "description": "Increment 2 added three optional fields, a backward-compatible change that keeps the @2 id (every earlier @2 payload still validates): assignment (the tm:assignment subject the observation was made for), delivery_ref (the delivery observed; assignments sharing one are released together) and recorded_at (when the observer saved it, as against the event time of the release). Increment 3 added the optional from_recording (W11), likewise.",
+  "type": "object",
+  "required": ["instructor", "unit", "observer", "length", "lead", "rubric_version", "scores"],
+  "additionalProperties": false,
+  "properties": {
+    "instructor": {"type": "string", "pattern": "^tm:instructor/"},
+    "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+    "observer": {"type": "string", "pattern": "^tm:instructor/"},
+    "length": {"enum": ["full", "short"]},
+    "lead": {"type": "boolean"},
+    "mode": {"enum": ["in-person", "remote", "hybrid"]},
+    "rubric_version": {"type": "string"},
+    "scores": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "integer", "minimum": 1, "maximum": 4}
+    },
+    "evidence_ref": {"type": "string", "description": "Key into the private store; notes never enter the event log"},
+    "assignment": {"type": "string", "pattern": "^tm:assignment/[0-9a-f]{16}$"},
+    "delivery_ref": {"type": "string", "minLength": 1, "description": "The delivery id or session reference, not a person's name"},
+    "recorded_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "from_recording": {"type": "boolean", "description": "Optional, additive within major 2 (increment 3, W11). True when the observer scored the session from a recording. A partner instructor's clearance counts only such observations."}
+  }
+}

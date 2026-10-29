@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/bench-decision@1",
+  "title": "Bench decision event payload (W10)",
+  "description": "The head of training's decision on a bench review, with the hash of the evidence pack it rested on. The rationale is required and stays in the private store under rationale_key; the event holds references and a hash only (decisions 0003 and 0005). return-to-co-teaching is the default for a teaching-quality reason.",
+  "type": "object",
+  "required": ["bench", "instructor", "decision", "rationale_key", "evidence_pack_sha256", "decided_by", "signoff_id"],
+  "additionalProperties": false,
+  "properties": {
+    "bench": {"type": "string", "pattern": "^tm:bench/[a-z0-9][a-z0-9-]*--[1-9][0-9]*$"},
+    "instructor": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+    "decision": {"enum": ["renew", "convert", "return-to-co-teaching", "exit"]},
+    "rationale_key": {"type": "string", "minLength": 1, "description": "Key into the private store"},
+    "evidence_pack_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decided_by": {"type": "string", "pattern": "^tm:(person|instructor)/[a-z0-9][a-z0-9-]*$", "description": "The head of training: a people-list person, or the instructor a mapped person signs as (decision 0012)"},
+    "signoff_id": {"type": "string", "pattern": "^[0-9a-f]{16,}$", "description": "The decider's sign-off"}
+  }
+}

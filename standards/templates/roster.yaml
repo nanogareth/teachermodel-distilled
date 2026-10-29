@@ -1,0 +1,35 @@
+# Roster import template (contract tm:contract/roster@2, contracts/roster.schema.json).
+# A filled roster holds names and emails: save it in the private store (decision 0006), never in
+# this repo. Check it with: teachermodel check-roster <path>
+# Fictional filled example: standards/templates/roster.example.yaml
+schema: tm:contract/roster@2
+as_of: YYYY-MM-DD                  # date the roster was true
+source: <where it came from>       # e.g. HR export, partner lead nomination list
+prepared_by: tm:person/<slug>      # optional
+instructors:
+  - instructor: tm:instructor/<slug>   # stable, meaningless id; never derived from the name
+    identity:                          # personal data: stays in the private store
+      name: <full name>
+      email: <work email>
+      hr_ref: <employee or supplier number>   # optional
+    type: <sme-engineer | professional | contractor | partner>
+    organisation: tm:org/<slug>
+    level: <shadow | co-deliver | lead-observed | cleared | clearer>   # baseline, set once
+    languages: [<BCP 47 tag, e.g. en>]
+    regions: [<ISO 3166 code, e.g. IE>]   # where they may be staffed
+    jurisdiction: <ISO 3166 code>         # where they work; sets the privacy law
+    notice:                               # privacy notice given at or before collection
+      version: <notice version>
+      given_on: YYYY-MM-DD
+    engagement:
+      start: YYYY-MM-DD
+      end: YYYY-MM-DD                     # required when status is ended
+      status: <active | paused | ended>
+      manager: tm:person/<slug>           # required for sme-engineer
+      protected_hours_per_month: <number> # required for sme-engineer
+      nominated_by: tm:person/<slug>      # required for partner
+      agreement_ref: <private-store key>  # optional; a key, not the document
+    delivers:                             # optional; units taught today (gap list input)
+      - unit: sl:unit/<slug>@<version>
+        modes: [<in-person | remote | hybrid>]
+        last_delivered: YYYY-MM-DD        # optional

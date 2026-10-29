@@ -1,0 +1,38 @@
+# W9 CPD workflow (tm:contract/workflows@1). Increment 3 plan section G; spec v0.2 W9; decision 0014 (cpd@1).
+# Event kinds in done_when: step (the plan) and signoff (the activity log). The activity hook writes `cpd` events, declared too.
+#
+# cpd-plan (auto, per instructor) seeds generated/cpd/<slug>.json once an instructor has an observation in the last 180 days:
+# the two lowest-averaged domains below 3 are the gaps, each open. It waits (and runs again) for an instructor with none.
+# log-activity is the instructor's own: an activity (text kept private), the domains it addresses, the hours and the date, which
+# become a `cpd` event. `bind: input` with the number of activities logged in the page inputs makes the step open again after
+# each one; its due rule (cpd_activity_window) counts 91 days from the latest activity, or from the plan. The next coaching
+# cycle's close (coaching.yaml) keeps or closes each gap: closed when the domain's latest average is 3 or more.
+# due {days} is an operational default (decision 0002), not an evidence-based threshold.
+schema_version: 1
+id: tm:standards/workflows-cpd
+status: draft
+workflows:
+  - id: tm:workflow/cpd
+    name: W9 CPD
+    basis: "instructor-development-spec-v0.2 W9 (the lowest-scoring domains across recent observations seed the CPD plan; activities are logged against domains; the next coaching cycle closes or keeps the gap); increment-3 plan G; decision 0014"
+    event_kinds: [step, signoff, cpd]
+    steps:
+      - id: tm:step/cpd-plan
+        name: CPD plan seeded from the lowest-scoring domains
+        type: auto
+        role: coordinator
+        subject: instructor
+        needs: [tm:step/open-candidates]
+        done_when: {kind: step, match: {step: tm:step/cpd-plan}}
+        due: {days: 7, basis: operational default}
+        basis: "spec v0.2 W9 (the lowest-scoring domains across recent observations seed the plan); rules: observations of the last 180 days"
+      - id: tm:step/log-activity
+        name: Development activity logged against the framework domains
+        type: human
+        role: instructor
+        subject: instructor
+        needs: [tm:step/cpd-plan]
+        done_when: {kind: signoff, match: {step: tm:step/log-activity}, bind: input}
+        due: cpd_activity_window
+        page: approve
+        basis: "spec v0.2 W9 (activities are logged against domains by the instructor)"

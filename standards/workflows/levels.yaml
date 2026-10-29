@@ -1,0 +1,46 @@
+# Level moves to and from cleared and clearer (tm:contract/workflows@1). Increment 2 plan, section D; spec v0.2 Users and
+# roles (an instructor progresses shadow -> co-deliver -> lead under observation -> cleared -> clearer; a clearer is a cleared
+# instructor who has passed observer calibration) and Domain model (a level moves only by a recorded decision).
+# Event kinds in done_when: step (the proposal, and the system skip when there is nothing to decide) and signoff. The hook of
+# the decision writes `level_change` events, declared too.
+#
+# propose-levels (auto, programme, refreshed on every run) proposes, per registered instructor by their latest level, where
+# a valid clearance is one the staffing check accepts that day for some unit and mode (records.clearances):
+#   lead-observed -> cleared        while they hold a valid clearance;
+#   cleared -> clearer              while they hold a valid clearance AND rules.is_calibrated holds for them that day;
+#   clearer -> cleared              when a calibration they passed has lapsed and none is current;
+#   cleared -> lead-observed        when a clearance of theirs that was in force is on record and no valid one remains.
+# The demotions need lapsed evidence on record: a roster level with nothing in the log is not demoted.
+# It writes the rows to generated/levels.json. With no rows, it writes the system `step` event marked skipped that closes
+# levels-decided for those (empty) inputs; with rows, the head of training decides each row on one approve page
+# (approve or decline; `bind: input`, so a changed proposal reopens it). It is deliberately not a batch page
+# (signoff.BATCH_STEPS requires every row approved). The hook recomputes the proposal and writes one `level_change` per
+# approved row it still holds (the instructor still at the row's `from` level and its basis not lapsed).
+# due {days} is an operational default (decision 0002), not an evidence-based threshold.
+schema_version: 1
+id: tm:standards/workflows-levels
+status: draft
+workflows:
+  - id: tm:workflow/levels
+    name: Level moves (to and from cleared and clearer)
+    basis: "instructor-development-spec-v0.2 Users and roles (levels; a clearer is a cleared instructor who passed calibration) and Domain model (level moves only by a recorded decision); increment-2 plan section D"
+    event_kinds: [step, signoff, level_change]
+    steps:
+      - id: tm:step/propose-levels
+        name: Level moves proposed from clearances and calibrations, and their lapse
+        type: auto
+        role: head-of-training
+        subject: programme
+        needs: [tm:step/roster-import]
+        done_when: {kind: step, match: {step: tm:step/propose-levels}}
+        basis: "instructor-development-spec-v0.2 Users and roles (cleared after a clearance decision; a clearer is a cleared instructor who passed observer calibration); Rules (clearance expiry, clearer renewal)"
+      - id: tm:step/levels-decided
+        name: Level moves decided by the head of training, row by row
+        type: human
+        role: head-of-training
+        subject: programme
+        needs: [tm:step/propose-levels]
+        done_when: {kind: signoff, match: {step: tm:step/levels-decided}, bind: input, skippable: true}
+        due: {days: 7, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 Domain model (level moves only by a recorded decision); Users and roles (the head signs off clearers)"

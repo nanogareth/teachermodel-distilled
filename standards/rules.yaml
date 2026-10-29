@@ -1,0 +1,42 @@
+schema_version: 1
+id: tm:rules/clearance
+framework_version: "1.1.0"
+# Decision 0023: 1.1.0 promoted the 0.2.0 draft with its content unchanged, so clearances and observations judged
+# against a 0.x framework stay in force under 1.x. A later major revision expires them as the spec says.
+framework_compatible_majors: ["0"]
+status: draft
+# Defaults are proposals to confirm (spec v0.2, Open decisions). Keys marked v02 changed on strong evidence.
+clearance:
+  min_observations: 2             # v02: MET reliability
+  min_distinct_observers: 2       # v02
+  require_full_lead_observation: true
+  short_observation_minutes: 15   # v02: counts toward the minimum
+  max_coach_observers: 1          # v02: a coach supplies at most one of the observers
+  min_domain_average: 2
+  min_overall_mean: 3
+  expiry_months: 12
+  conditional_recheck_required: true
+calibration:
+  within_one_point_share: 0.9
+  exact_agreement_share: 0.6
+  renewal_months: 6
+audit:                            # v02
+  sample_rate: 0.10
+  min_per_observer: 2
+coaching:                         # v02
+  standard_cycle_days: 91
+  triggered_cycle_days: 30
+quality:
+  min_learners_for_metric: 15
+  score_drop_points: 10
+  consecutive_deliveries: 2
+  domain_one_needs_second_observer: true   # v02
+  confirmation_window_days: 90
+feedback:
+  consecutive_below_median: 2
+bench:
+  min_distinct_observers: 2       # v02
+  current_window_days: 180
+  require_evidence_pack: true
+staffing:
+  warn_expiry_days: 30

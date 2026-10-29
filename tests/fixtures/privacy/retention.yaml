@@ -1,0 +1,18 @@
+# FICTIONAL fixture for tests of tm:contract/retention@2. The periods are placeholders, not proposals.
+schema_version: 2
+status: draft
+basis: fictional values for tests
+entries:
+  - category: performance-data
+    purpose: tm:purpose/test-clearance
+    period_months: 24
+    starts: The engagement ends.
+    reason: Long enough to answer a challenge to a clearance decision made during the engagement.
+    basis: legitimate-interests
+  - category: record-of-actions
+    purpose: tm:purpose/test-clearance
+    jurisdiction: tm:jurisdiction/yy-aa
+    until_event: the instructor asks for deletion
+    starts: The action is logged.
+    reason: The log is the audit trail, so it stays until deletion is requested under the overlay.
+    basis: legitimate-interests

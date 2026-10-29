@@ -1,0 +1,67 @@
+# W6 Observation audit workflow (tm:contract/workflows@1). Increment 3 plan, section F; spec v0.2 W6 and Rules (observation
+# audit); decision 0014 (the `sample` subject, the `audit` event).
+# Each quarter the system draws a sample of observations for independent double-scoring (rules.audit_sample: 10%, at least 2
+# per observer). `draw-sample` is an auto step on the programme: on the first run after a quarter has closed it draws that
+# quarter, once, over all its live observations read by the date of the observation (integration review findings 6 and 20), and
+# opens one `sample` subject (subject@2) per observation picked, naming the second observer, a calibrated clearer other than the
+# first observer, any other observer of the sampled delivery (the same delivery_ref), the instructor and the instructor's
+# coaches, chosen by hash rank (finding 7). The draw is recorded on a `step` event {quarter, drawn: true}; observations released
+# after it do not top the sample up. It is done after its first run and then refreshes, like open-candidates: a run with no
+# quarter to draw appends nothing, except that a drawn quarter is completed (a pick that had no eligible second observer, a void's
+# replacement), and a sample once drawn is never withdrawn. Event kinds in done_when: signoff and step.
+#
+# `second-score` is the second observer scoring the observation again from the recording, with the evidence_score page, blind
+# to the first observer's scores (they are never on the page or in its inputs). The step has no `signer` attribute: the
+# workflows schema enum has no attrs.second_observer (decision 0012 lists observer, instructor and observers), so a content
+# check on the sign-off (flows/audit.py) refuses any signer other than the sample's second_observer. The step role is clearer,
+# so the bridge still requires the signer to hold it. `audit-result` (auto, per sample) computes the agreement between the two
+# scorings with rules.calibration_pass (the first observer's scores are the reference, so the shares and the verdict are those of
+# W5), writes the `audit` event (audit@1: shares and flags, never the scores), and, when the thresholds are not met, a `check`
+# {result: refer-to-calibration, observer}: records.calibrations then treats the first observer as not calibrated from the day of
+# the audit until a passed calibration dated after it. Also written: `subject` (the samples) and `check` (a draw with no eligible
+# second observer, or a result that cannot be computed).
+# Eligibility is re-checked (decision 0015, amended): the content check refuses a second scoring from a second observer who is no
+# longer a calibrated clearer or has become the instructor's coach on the day of signing, and draw-sample's refresh voids such a
+# sample that has no second scoring yet: a `check` {result: void}, a system `step` marked skipped that closes second-score
+# (`bind: input` with `skippable`, so the skip covers the inputs it was made on) and a `step` {step: audit-result, void: true}.
+# A sample is identified by its quarter and observation and its attrs are immutable, so it is not given a new second observer;
+# the observation is withdrawn from the quarter's quota and the same run draws the next-ranked one in its place.
+# due {days} values are operational defaults (decision 0002), not evidence-based thresholds: a second scoring is due 14 days
+# after the sample is drawn.
+schema_version: 1
+id: tm:standards/workflows-audit
+status: draft
+workflows:
+  - id: tm:workflow/audit
+    name: W6 Observation audit
+    basis: "instructor-development-spec-v0.2 W6 Observation audit and Rules (observation audit, calibration pass); increment-3 plan section F; decision 0014"
+    event_kinds: [step, signoff, subject, audit, check]
+    steps:
+      - id: tm:step/draw-sample
+        name: Quarterly audit sample drawn from the observations on record
+        type: auto
+        role: head-of-training
+        subject: programme
+        needs: [tm:step/roster-import]
+        done_when: {kind: step, match: {step: tm:step/draw-sample}}
+        due: {days: 7, basis: operational default}
+        basis: "instructor-development-spec-v0.2 W6 and Rules (audit: 10% of live observations, at least 2 per observer, each quarter); rules.audit_sample; the second observer is a hash-ranked calibrated clearer, not the first observer, the instructor or the instructor's coach"
+      - id: tm:step/second-score
+        name: Sampled observation scored again from the recording by the second observer
+        type: human
+        role: clearer
+        subject: sample
+        needs: []
+        done_when: {kind: signoff, match: {step: tm:step/second-score}, bind: input, skippable: true}
+        due: {days: 14, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W6 (independent double-scoring from the recording; the second observer does not see the first observer's scores)"
+      - id: tm:step/audit-result
+        name: Agreement between the two scorings computed, a low result referred to calibration
+        type: auto
+        role: head-of-training
+        subject: sample
+        needs: [tm:step/second-score]
+        done_when: {kind: step, match: {step: tm:step/audit-result}}
+        due: {days: 7, basis: operational default}
+        basis: "instructor-development-spec-v0.2 W6 and Rules (low agreement sends the observer back to W5); rules.calibration_pass thresholds; audit@1"

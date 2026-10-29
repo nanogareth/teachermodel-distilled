@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/staffing-check@1",
+  "title": "Staffing check: request from delivery scheduling, response from teachermodel",
+  "$defs": {
+    "request": {
+      "type": "object",
+      "required": ["instructor", "module", "mode", "date"],
+      "additionalProperties": false,
+      "properties": {
+        "instructor": {"type": "string", "pattern": "^tm:instructor/"},
+        "module": {"type": "string", "pattern": "^(tm|sl):module/"},
+        "mode": {"enum": ["in-person", "remote", "hybrid"]},
+        "date": {"type": "string", "format": "date"}
+      }
+    },
+    "response": {
+      "type": "object",
+      "required": ["verdict", "reasons"],
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {"enum": ["ok", "warn", "block"]},
+        "reasons": {"type": "array", "items": {"type": "string"}},
+        "clearance": {"type": "string", "pattern": "^tm:clearance/"}
+      }
+    }
+  }
+}

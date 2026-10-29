@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gap list: agree the rows</title>
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff; --fg: #1b1f24; --muted: #57606a; --card: #f6f8fa; --line: #d0d7de;
+  --accent: #0b5cad; --accent-fg: #ffffff; --err: #b42318; --ok: #1a7f37;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117; --fg: #e6edf3; --muted: #9da7b3; --card: #161b22; --line: #30363d;
+    --accent: #58a6ff; --accent-fg: #0d1117; --err: #ff7b72; --ok: #3fb950;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Arial, sans-serif; }
+main { max-width: 54rem; margin: 0 auto; padding: 1rem; }
+h1 { font-size: 1.4rem; margin: 0.5rem 0; }
+h2 { font-size: 1.1rem; margin: 0 0 0.5rem; }
+.meta { color: var(--muted); font-size: 0.85rem; margin: 0 0 1rem; overflow-wrap: anywhere; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 0.9rem 1rem; margin: 0 0 1rem; }
+dl { margin: 0; }
+dt { font-weight: 600; margin-top: 0.5rem; }
+dd { margin: 0 0 0 1rem; overflow-wrap: anywhere; }
+ul { margin: 0.25rem 0; padding-left: 1.25rem; }
+code { font-family: ui-monospace, Consolas, monospace; font-size: 0.9em; overflow-wrap: anywhere; }
+.field { margin: 0 0 1rem; }
+.field > label, .field > legend, fieldset > legend { font-weight: 600; display: block; padding: 0; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.help { color: var(--muted); font-size: 0.9rem; margin: 0.15rem 0 0.35rem; }
+.req { color: var(--err); }
+input[type=text], input[type=date], input[type=number], select, textarea { width: 100%; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 0.5rem; }
+textarea { min-height: 6rem; }
+fieldset textarea { min-height: 3.5rem; }
+.sub { display: block; margin-top: 0.5rem; font-weight: 600; }
+.opt { display: block; margin: 0.25rem 0; padding: 0.4rem 0.5rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.opt input { margin-right: 0.5rem; }
+.opt .anchor { color: var(--muted); font-size: 0.9rem; display: block; margin-left: 1.6rem; }
+.check { display: block; font-weight: 400; }
+.row { border-top: 1px solid var(--line); padding: 0.6rem 0; }
+.row:first-child { border-top: 0; }
+.row .key { font-weight: 600; overflow-wrap: anywhere; }
+.pills { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.35rem; }
+.pills .opt { margin: 0; }
+button { font: inherit; background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 6px; padding: 0.7rem 1.2rem; cursor: pointer; }
+a { color: var(--accent); }
+#tm-errors { color: var(--err); border: 1px solid var(--err); border-radius: 8px; padding: 0.6rem 1rem; margin: 0 0 1rem; }
+#tm-errors ul { margin: 0; }
+#tm-status { color: var(--ok); margin: 1rem 0 0; font-weight: 600; }
+summary { cursor: pointer; font-weight: 600; }
+h3 { font-size: 1.02rem; margin: 1.1rem 0 0.4rem; }
+h4 { font-size: 0.95rem; margin: 0.9rem 0 0.3rem; }
+h5, h6 { font-size: 0.9rem; margin: 0.8rem 0 0.3rem; }
+table { border-collapse: collapse; width: 100%; margin: 0.4rem 0 0.8rem; font-size: 0.92rem; }
+th, td { border: 1px solid var(--line); padding: 0.35rem 0.5rem; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+thead th, table.kv th { background: var(--bg); }
+table.kv th { width: 30%; font-weight: 600; }
+.scroll { overflow-x: auto; }
+.part { border-top: 1px solid var(--line); margin-top: 0.6rem; }
+.part:first-of-type { border-top: 0; }
+.part .part { border-top: 0; margin-left: 0.5rem; }
+.review { float: right; font-size: 0.82rem; font-weight: 400; color: var(--muted); white-space: nowrap; margin-left: 0.75rem; }
+.review input { margin: 0 0.3rem 0 0; vertical-align: middle; }
+.contents ol { margin: 0.2rem 0 0.6rem; padding-left: 1.4rem; columns: 2; font-size: 0.92rem; }
+.para { color: var(--muted); font-size: 0.8rem; font-weight: 600; margin-right: 0.25rem; }
+details.ref { border-top: 1px solid var(--line); padding: 0.5rem 0; }
+details.ref > summary { font-weight: 600; }
+.progress { position: sticky; top: 0; z-index: 1; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 0.45rem 0.8rem; margin: 0 0 1rem; font-size: 0.9rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.progress.done { border-color: var(--ok); }
+.progress button { padding: 0.25rem 0.6rem; font-size: 0.85rem; background: transparent; color: var(--accent); border: 1px solid var(--line); }
+@media (max-width: 40rem) { .contents ol { columns: 1; } .review { float: none; display: block; margin: 0.2rem 0 0; } }
+</style>
+</head>
+<body>
+<main>
+<h1>Gap list: agree the rows</h1>
+<p class="meta">Step <code>tm:step/gap-list-approved</code> &middot; subject <code>tm:programme/teachermodel</code> &middot; signing as <code>tm:person/example-owner</code> (programme-owner)</p>
+<div id="tm-progress" class="progress" role="status" hidden><span id="tm-progress-text"></span><button type="button" id="tm-clear">Clear saved progress</button></div>
+<section class="card">
+<h2>What you are approving</h2>
+<p>Approve the unchanged rows in one step; decide each changed row.</p>
+<section class="part" id="part-summary"><h3>Summary<label class="review"><input type="checkbox" data-review="part-summary"> Reviewed</label></h3><table class="kv"><tbody><tr><th>List</th><td>Gap list</td></tr></tbody></table></section>
+</section>
+<section class="card">
+<h2>Changed since the last approval (2)</h2>
+<div class="row" data-row="0"><span class="key">tm:instructor/example-a|sl:unit/example-agent-loop@1</span><br>No clearance on file<div class="pills"><label class="opt"><input type="radio" name="row-0" value="approve"> Approve</label><label class="opt"><input type="radio" name="row-0" value="reject"> Reject</label></div></div><div class="row" data-row="1"><span class="key">tm:instructor/example-b|sl:unit/example-agent-loop@1</span><br>Clearance lapsed<div class="pills"><label class="opt"><input type="radio" name="row-1" value="approve"> Approve</label><label class="opt"><input type="radio" name="row-1" value="reject"> Reject</label></div></div>
+</section>
+<section class="card">
+<h2>Unchanged (2)</h2>
+<label class="check"><input type="checkbox" id="tm-approve-unchanged"> Approve all unchanged rows</label>
+<details>
+<summary>Show unchanged rows</summary>
+<div class="row"><span class="key">tm:instructor/example-c|sl:unit/example-agent-loop@1</span><br>Cleared</div><div class="row"><span class="key">tm:instructor/example-d|sl:unit/example-agent-loop@1</span><br>Cleared</div>
+</details>
+</section>
+<section class="card">
+<h2>Your answer</h2>
+<div class="field"><label for="f-note">Note</label><input type="text" id="f-note" data-f="note" value=""></div>
+<div class="field">
+<label for="tm-decision">Decision <span class="req" aria-hidden="true">*</span></label>
+<select id="tm-decision" data-decision>
+<option value="">-- choose --</option>
+<option value="approve">Approve</option>
+<option value="changes">Request changes</option>
+</select>
+</div>
+</section>
+
+<div id="tm-errors" role="alert" hidden></div>
+<p><button type="button" id="tm-save">Save sign-off file</button></p>
+<p id="tm-status" role="status" hidden></p>
+<section class="card"><h2>Where to send it</h2><p>Save the downloaded file, unchanged, into the library folder <code>Instructor Development Library/inbox</code>.</p></section>
+</main>
+<script type="application/json" id="tm-data">{
+ "schema": "tm:contract/signoff@1",
+ "template": "batch_approve",
+ "step": "tm:step/gap-list-approved",
+ "subject_uri": "tm:programme/teachermodel",
+ "signer": "tm:person/example-owner",
+ "role": "programme-owner",
+ "input_sha256": "d6de54cf761085623313fc374b75f42710b8a78533ad87f6a383af9961e456d7",
+ "page_template_sha256": "8036b820fbd167abf824dc0e4cc258f74ae67a4a7a3276609a8430a07b7b5b38",
+ "channel": {
+  "kind": "library",
+  "path": "Instructor Development Library/inbox"
+ },
+ "fields": [
+  {
+   "name": "note",
+   "label": "Note",
+   "kind": "text",
+   "required": false,
+   "help": "",
+   "value": null
+  }
+ ],
+ "inputs": {
+  "list": "Gap list",
+  "rows": [
+   {
+    "key": "tm:instructor/example-a|sl:unit/example-agent-loop@1",
+    "summary": "No clearance on file",
+    "changed": true
+   },
+   {
+    "key": "tm:instructor/example-b|sl:unit/example-agent-loop@1",
+    "summary": "Clearance lapsed",
+    "changed": true
+   },
+   {
+    "key": "tm:instructor/example-c|sl:unit/example-agent-loop@1",
+    "summary": "Cleared",
+    "changed": false
+   },
+   {
+    "key": "tm:instructor/example-d|sl:unit/example-agent-loop@1",
+    "summary": "Cleared",
+    "changed": false
+   }
+  ]
+ }
+}</script>
+<script>
+(function () {
+  'use strict';
+  var data = JSON.parse(document.getElementById('tm-data').textContent);
+  var errBox = document.getElementById('tm-errors');
+  var statusBox = document.getElementById('tm-status');
+
+  function all(sel) { return document.querySelectorAll(sel); }
+
+  function readField(f) {
+    var els = all('[data-f="' + f.name + '"]'), i;
+    if (f.kind === 'score') {
+      for (i = 0; i < els.length; i++) { if (els[i].checked) { return parseInt(els[i].value, 10); } }
+      return null;
+    }
+    if (f.kind === 'bool') { return els.length > 0 && els[0].checked; }
+    var v = els.length ? els[0].value.trim() : '';
+    return v === '' ? null : v;
+  }
+
+  function rowChoice(i) {
+    var radios = all('[data-row="' + i + '"] input[type=radio]'), j;
+    for (j = 0; j < radios.length; j++) { if (radios[j].checked) { return radios[j].value; } }
+    return null;
+  }
+
+  function radioValue(sel) {
+    var els = all(sel), i;
+    for (i = 0; i < els.length; i++) { if (els[i].checked) { return els[i].value; } }
+    return null;
+  }
+
+  function part(f, name, item) {
+    return document.querySelector('[data-f="' + f.name + '"][data-part="' + name + '"]' +
+      (item ? '[data-item="' + item + '"]' : ''));
+  }
+
+  // evidence_score -> { score, note, timestamp? }: a score needs its note; nothing at all is "not answered".
+  function collectEvidence(f, fields, errors) {
+    var score = radioValue('[data-f="' + f.name + '"][data-part="score"]');
+    var note = part(f, 'note').value.trim(), ts = part(f, 'timestamp').value.trim(), v;
+    if (score === null && note === '' && ts === '') {
+      if (f.required) { errors.push(f.label + ': required'); }
+      return;
+    }
+    if (score === null) { errors.push(f.label + ': choose a score 1 to 4'); return; }
+    if (note === '') { errors.push(f.label + ': evidence note required'); return; }
+    v = { score: parseInt(score, 10), note: note };
+    if (ts !== '') { v.timestamp = ts; }
+    fields[f.name] = v;
+  }
+
+  // checklist -> { item_id: { result: 'pass'|'fail', note } }: every item answered, a failed item explained.
+  function collectChecklist(f, fields, errors) {
+    var out = {}, touched = false, bad = 0, i, it, r, n;
+    for (i = 0; i < f.items.length; i++) {
+      it = f.items[i];
+      r = radioValue('[data-f="' + f.name + '"][data-part="result"][data-item="' + it.id + '"]');
+      n = part(f, 'note', it.id).value.trim();
+      if (r !== null || n !== '') { touched = true; }
+      out[it.id] = { result: r, note: n };
+    }
+    if (!touched) {
+      if (f.required) { errors.push(f.label + ': required'); }
+      return;
+    }
+    for (i = 0; i < f.items.length; i++) {
+      it = f.items[i];
+      if (out[it.id].result === null) { errors.push(f.label + ' / ' + it.label + ': choose pass or fail'); bad++; }
+      else if (out[it.id].result === 'fail' && out[it.id].note === '') {
+        errors.push(f.label + ' / ' + it.label + ': note required for a failed item'); bad++;
+      }
+    }
+    if (!bad) { fields[f.name] = out; }
+  }
+
+  function collect() {
+    var errors = [], fields = {}, i, f, v;
+    for (i = 0; i < data.fields.length; i++) {
+      f = data.fields[i];
+      if (f.kind === 'evidence_score') { collectEvidence(f, fields, errors); continue; }
+      if (f.kind === 'checklist') { collectChecklist(f, fields, errors); continue; }
+      v = readField(f);
+      if (f.kind === 'bool') {
+        if (f.required && !v) { errors.push(f.label + ': must be ticked'); }
+        fields[f.name] = v;
+        continue;
+      }
+      if (v === null) {
+        if (f.required) { errors.push(f.label + ': required'); }
+        continue;
+      }
+      if (f.kind === 'enum' && f.options.indexOf(v) < 0) { errors.push(f.label + ': choose one of the listed options'); continue; }
+      if (f.kind === 'score' && !(v >= 1 && v <= 4)) { errors.push(f.label + ': choose 1 to 4'); continue; }
+      if (f.kind === 'date' && !/^\d{4}-\d{2}-\d{2}$/.test(v)) { errors.push(f.label + ': use a date (YYYY-MM-DD)'); continue; }
+      if (f.kind === 'number') {
+        if (!/^-?\d+(\.\d+)?$/.test(v)) { errors.push(f.label + ': enter a number'); continue; }
+        v = parseFloat(v);
+        if (typeof f.min === 'number' && v < f.min) { errors.push(f.label + ': at least ' + f.min); continue; }
+        if (typeof f.max === 'number' && v > f.max) { errors.push(f.label + ': at most ' + f.max); continue; }
+      }
+      fields[f.name] = v;
+    }
+    if (data.template === 'batch_approve') {
+      var rows = {}, src = data.inputs.rows || [], approveAll = document.getElementById('tm-approve-unchanged');
+      for (i = 0; i < src.length; i++) {
+        if (src[i].changed === false) {
+          rows[src[i].key] = (approveAll && approveAll.checked) ? 'approve' : 'unreviewed';
+        } else {
+          v = rowChoice(i);
+          if (v === null) { errors.push(src[i].key + ': choose approve or reject'); } else { rows[src[i].key] = v; }
+        }
+      }
+      fields.rows = rows;
+    }
+    var dec = document.querySelector('[data-decision]');
+    var decision = dec ? dec.value : '';
+    if (data.template === 'dpia_screening') {
+      // Only a DPO decision of "not required" approves; every other answer asks for changes.
+      decision = fields['dpo-decision'] === 'dpia-not-required' ? 'approve' : 'changes';
+    }
+    if (!decision) { errors.push('Decision: required'); }
+    if (data.template === 'batch_approve' && decision === 'approve') {
+      var rk, notApproved = 0;
+      for (rk in fields.rows) { if (fields.rows[rk] !== 'approve') { notApproved++; } }
+      if (notApproved) {
+        errors.push('Decision "Approve" needs every row approved, but ' + notApproved +
+          ' row(s) are rejected or unreviewed. Approve them, tick "Approve all unchanged rows", or choose "Request changes".');
+      }
+    }
+    return { errors: errors, fields: fields, decision: decision };
+  }
+
+  function hexId() {
+    var b = new Uint8Array(16);
+    crypto.getRandomValues(b);
+    return Array.prototype.map.call(b, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+  }
+
+  function slug(s) { return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+
+  function build(c) {
+    return {
+      schema: 'tm:contract/signoff@1',
+      id: hexId(),
+      step: data.step,
+      subject_uri: data.subject_uri,
+      input_sha256: data.input_sha256,
+      decision: c.decision,
+      fields: c.fields,
+      signer: data.signer,
+      signed_at: new Date().toISOString(),
+      page_template_sha256: data.page_template_sha256
+    };
+  }
+
+  function fileName(s) {
+    return slug(s.step.replace(/^tm:step\//, '')) + '-' + slug(s.subject_uri.replace(/^(tm|sl):/, '')) + '-' + s.id + '.json';
+  }
+
+  // An unsent Outlook draft (X-Unsent) addressed to the sign-off mailbox, with the tagged subject and the sign-off file
+  // attached, so nothing is attached or typed by hand (2026-10-27 pilot: three sign-offs went out without their file).
+  function emlDraft(to, subject, fileName, text) {
+    var bytes = new TextEncoder().encode(text), bin = '';
+    for (var i = 0; i < bytes.length; i++) { bin += String.fromCharCode(bytes[i]); }
+    var b64 = btoa(bin).replace(/.{1,76}/g, function (line) { return line + '\r\n'; });
+    var boundary = 'tm-boundary-' + subject.replace(/[^0-9a-z]+/gi, '');
+    return [
+      'To: ' + to,
+      'Subject: ' + subject,
+      'X-Unsent: 1',
+      'MIME-Version: 1.0',
+      'Content-Type: multipart/mixed; boundary="' + boundary + '"',
+      '',
+      '--' + boundary,
+      'Content-Type: text/plain; charset=us-ascii',
+      'Content-Transfer-Encoding: 7bit',
+      '',
+      'The sign-off file is attached. Send this message unchanged.',
+      '--' + boundary,
+      'Content-Type: application/json; name="' + fileName + '"',
+      'Content-Disposition: attachment; filename="' + fileName + '"',
+      'Content-Transfer-Encoding: base64',
+      '',
+      b64 + '--' + boundary + '--',
+      ''
+    ].join('\r\n');
+  }
+
+  function download(name, text, type) {
+    var blob = new Blob([text], { type: type || 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+  }
+
+  function showErrors(list) {
+    errBox.textContent = '';
+    var ul = document.createElement('ul');
+    list.forEach(function (e) { var li = document.createElement('li'); li.textContent = e; ul.appendChild(li); });
+    errBox.appendChild(ul);
+    errBox.hidden = false;
+    errBox.scrollIntoView();
+  }
+
+  function save() {
+    var c = collect();
+    statusBox.hidden = true;
+    if (c.errors.length) { showErrors(c.errors); return; }
+    errBox.hidden = true;
+    var s = build(c), name = fileName(s), text = JSON.stringify(s, null, 2);
+    var subject = '[tm-signoff ' + s.id + ']';
+    Array.prototype.forEach.call(all('[data-subject]'), function (el) { el.textContent = subject; });
+    if (data.channel.kind === 'mail') {
+      var draft = name.replace(/\.json$/, '.eml');
+      download(draft, emlDraft(data.channel.to, subject, name, text), 'message/rfc822');
+      var alone = document.getElementById('tm-json');
+      alone.onclick = function () { download(name, text); };
+      alone.hidden = false;
+      var link = document.getElementById('tm-mailto');
+      link.href = 'mailto:' + data.channel.to + '?subject=' + encodeURIComponent(subject);
+      link.hidden = false;
+      statusBox.textContent = 'Saved ' + draft + '. Open it, check it is addressed to ' + data.channel.to +
+        ' with the sign-off file attached, and press Send.';
+    } else {
+      download(name, text);
+      statusBox.textContent = 'Saved ' + name + '. Now send it as described below.';
+    }
+    statusBox.hidden = false;
+  }
+
+  // --- review ticks and saved progress: kept in this browser until saved over or cleared -----------------
+  var storeKey = 'tm-page:' + [data.step, data.subject_uri, data.signer, data.input_sha256].join('|');
+  var progress = document.getElementById('tm-progress');
+  var progressText = document.getElementById('tm-progress-text');
+
+  function storage() { try { return window.localStorage; } catch (e) { return null; } }
+  function controls() { return all('main input, main select, main textarea'); }
+  function controlKey(el) {
+    if (el.id) { return '#' + el.id; }
+    if (el.hasAttribute('data-review')) { return 'review:' + el.getAttribute('data-review'); }
+    return el.name ? el.name + '=' + el.value : null;
+  }
+  function isTick(el) { return el.type === 'checkbox' || el.type === 'radio'; }
+
+  function snapshot() {
+    var state = {};
+    Array.prototype.forEach.call(controls(), function (el) {
+      var k = controlKey(el);
+      if (k) { state[k] = isTick(el) ? el.checked : el.value; }
+    });
+    return state;
+  }
+
+  function persist() {
+    var ls = storage();
+    if (ls) {
+      try { ls.setItem(storeKey, JSON.stringify({ saved: new Date().toISOString(), state: snapshot() })); } catch (e) { /* storage full or blocked */ }
+    }
+    updateProgress();
+  }
+
+  function restore() {
+    var ls = storage(), raw = null, obj;
+    if (!ls) { return; }
+    try { raw = ls.getItem(storeKey); } catch (e) { return; }
+    if (!raw) { return; }
+    try { obj = JSON.parse(raw); } catch (e) { return; }
+    var state = (obj && obj.state) || {};
+    Array.prototype.forEach.call(controls(), function (el) {
+      var k = controlKey(el);
+      if (!k || !Object.prototype.hasOwnProperty.call(state, k)) { return; }
+      if (isTick(el)) { el.checked = !!state[k]; } else { el.value = state[k]; }
+    });
+  }
+
+  function updateProgress() {
+    var boxes = all('[data-review]'), done = 0, i;
+    if (!boxes.length) { return; }
+    for (i = 0; i < boxes.length; i++) { if (boxes[i].checked) { done++; } }
+    progressText.textContent = 'Reviewed ' + done + ' of ' + boxes.length + ' sections. ' +
+      (storage() ? 'Your ticks and answers are kept in this browser until you clear them.' : 'This browser cannot keep your progress.');
+    progress.className = 'progress' + (done === boxes.length ? ' done' : '');
+    progress.hidden = false;
+  }
+
+  function openTarget(id) {
+    var el = id && document.getElementById(id);
+    var d = el && el.closest ? el.closest('details') : null;
+    if (d) { d.open = true; }
+  }
+
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[href^="#"]') : null;
+    if (a) { openTarget(a.getAttribute('href').slice(1)); }
+  });
+  document.addEventListener('change', persist);
+  document.addEventListener('input', persist);
+  document.getElementById('tm-clear').addEventListener('click', function () {
+    var ls = storage();
+    if (ls) { try { ls.removeItem(storeKey); } catch (e) { /* blocked */ } }
+    window.location.reload();
+  });
+  restore();
+  updateProgress();
+  if (window.location.hash) { openTarget(window.location.hash.slice(1)); }
+
+  document.getElementById('tm-save').addEventListener('click', save);
+  window.tmCollect = collect;
+  window.tmBuild = function () { var c = collect(); return c.errors.length ? c : build(c); };
+}());
+</script>
+</body>
+</html>

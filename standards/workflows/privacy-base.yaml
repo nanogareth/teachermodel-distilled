@@ -1,0 +1,84 @@
+# Privacy-base workflow (tm:contract/workflows@1). Spec: docs/specs/2026-10-24-privacy-jurisdictions-design.md §4;
+# decisions 0005, 0009, 0010. The base profile (the one profile with role base under standards/privacy/jurisdictions/)
+# covers every instructor; the overlay workflow (a later increment) adds each other jurisdiction.
+# Event kinds in done_when: step, signoff (declared in event_kinds below).
+# auto steps complete on a `step` event {step: <id>}; human steps on a `signoff` event {step: <id>}.
+# `bind: input` steps are done only while the newest approving sign-off's input_sha256 equals the hash of the inputs the
+# page shows now, so editing the profile, a retention entry or the notice text reopens the approval on its own.
+# due {days} values are operational defaults (decision 0002), not evidence-based thresholds.
+schema_version: 1
+id: tm:standards/workflows-privacy-base
+status: draft
+workflows:
+  - id: tm:workflow/privacy-base
+    name: Privacy base (profile verification, record of processing, DPIA, retention, notice)
+    basis: "privacy-jurisdictions-design §4; decisions 0005, 0009, 0010"
+    event_kinds: [step, signoff]
+    steps:
+      - id: tm:step/base-profile-verified
+        name: Base profile verified
+        type: human
+        role: legal
+        subject: programme
+        needs: []
+        done_when: {kind: signoff, match: {step: tm:step/base-profile-verified}, bind: input, revocable: true}
+        due: {days: 21, basis: operational default}
+        page: approve
+        basis: "privacy-jurisdictions-design §2, §4 (internal legal signs the exact file bytes); decision 0009"
+      - id: tm:step/ropa
+        name: ROPA entry
+        type: auto
+        role: dpo
+        subject: programme
+        needs: []
+        done_when: {kind: step, match: {step: tm:step/ropa}}
+        due: {days: 10, basis: operational default}
+        basis: "workflow-automation-design §7 ROPA entry; privacy-jurisdictions-design §4 (purposes, bases, retention table); decision 0003"
+      - id: tm:step/ropa-approved
+        name: ROPA approved
+        type: human
+        role: dpo
+        subject: programme
+        needs: [tm:step/ropa]
+        done_when: {kind: signoff, match: {step: tm:step/ropa-approved}, bind: input, revocable: true}
+        due: {days: 14, basis: operational default}
+        page: approve
+        basis: "GDPR Art. 30 (record of processing activities); owner's instruction of 2026-10-26 that the DPO approves the ROPA as written; bound to the exact generated text, which includes the retention table and the controller, so editing either reopens it"
+      - id: tm:step/dpia-screening
+        name: DPIA screening
+        type: human
+        role: dpo
+        subject: programme
+        needs: [tm:step/ropa-approved, tm:step/base-profile-verified]
+        done_when: {kind: signoff, match: {step: tm:step/dpia-screening}, bind: input, revocable: true}
+        due: {days: 14, basis: operational default}
+        page: dpia_screening
+        basis: "workflow-automation-design §7 DPIA screening; privacy-jurisdictions-design §4 (criteria cited from the base profile; bound to the base profile's DPIA triggers, the purposes and the ROPA approval in force, so editing either file or re-approving a changed ROPA reopens it); WP248 rev.01 screening criteria"
+      - id: tm:step/retention-approved
+        name: Retention approved
+        type: human
+        role: head-of-training
+        subject: programme
+        needs: [tm:step/base-profile-verified, tm:step/dpia-screening]
+        done_when: {kind: signoff, match: {step: tm:step/retention-approved}, bind: input, revocable: true}
+        due: {days: 21, basis: operational default}
+        page: batch_approve
+        basis: "privacy-jurisdictions-design §4 (head of training approves every category and purpose, on legal advice); decisions 0002, 0010"
+      - id: tm:step/notice-text
+        name: Notice text rendered
+        type: auto
+        role: programme-owner
+        subject: programme
+        needs: [tm:step/retention-approved]
+        done_when: {kind: step, match: {step: tm:step/notice-text}}
+        basis: "privacy-jurisdictions-design §4 (renders from purposes, retention and the profile's mandatory elements); decision 0005"
+      - id: tm:step/notice-approved
+        name: Notice approved
+        type: human
+        role: programme-owner
+        subject: programme
+        needs: [tm:step/notice-text, tm:step/retention-approved]
+        done_when: {kind: signoff, match: {step: tm:step/notice-approved}, bind: input, revocable: true}
+        due: {days: 7, basis: operational default}
+        page: approve
+        basis: "privacy-jurisdictions-design §4 (owner approves the exact text and the profile it was rendered against)"

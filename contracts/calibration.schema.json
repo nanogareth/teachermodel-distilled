@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/calibration@1",
+  "title": "Calibration event payload (W5)",
+  "description": "One observer's result on one calibration exercise, computed by rules.calibration_pass. Shares only: the observer's scores and the reference scores never enter the event log.",
+  "type": "object",
+  "required": ["exercise", "observer", "unit", "rubric_version", "within_one_share", "exact_share", "passed", "signoff_id"],
+  "additionalProperties": false,
+  "properties": {
+    "exercise": {"type": "string", "pattern": "^tm:exercise/[0-9a-f]{16}$"},
+    "observer": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+    "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+    "rubric_version": {"type": "string", "minLength": 1},
+    "within_one_share": {"type": "number", "minimum": 0, "maximum": 1},
+    "exact_share": {"type": "number", "minimum": 0, "maximum": 1},
+    "passed": {"type": "boolean"},
+    "signoff_id": {"type": "string", "pattern": "^[0-9a-f]{16,}$", "description": "The observer's scoring sign-off the result was computed from"},
+    "inter_observer": {
+      "type": "object",
+      "required": ["within_one_share", "exact_share"],
+      "additionalProperties": false,
+      "description": "Optional, additive within major 1: this observer's agreement with the other observers of the exercise, pooled over them (spec W5 step 2, against each other). Reported only: passed is decided against the reference alone.",
+      "properties": {
+        "within_one_share": {"type": "number", "minimum": 0, "maximum": 1},
+        "exact_share": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    }
+  }
+}

@@ -1,0 +1,366 @@
+# Jurisdiction profile: California (overlay on tm:jurisdiction/ie). Contract:
+# tm:contract/jurisdiction@1. Design: docs/specs/2026-10-24-privacy-jurisdictions-design.md,
+# sections 2 and 3.
+#
+# DRAFT. AI-assisted research notes for internal legal. Not legal advice. Nothing here counts until
+# internal legal signs the exact bytes of this file on the generated review page. Verification is
+# that bound sign-off, never a field in this file. The Irish base still applies to California
+# instructors. Where both apply, the stricter rule holds; for retention, the shorter maximum and the
+# longer minimum. Detail the contract has no field for (source notes, derivations, open questions)
+# is in review_notes.
+
+schema_version: 1
+id: tm:jurisdiction/us-ca
+name: "California (overlay on Ireland: CCPA as amended by CPRA)"
+codes: [US-CA]
+role: overlay
+scope: >-
+  California Consumer Privacy Act of 2018 as amended by the California Privacy Rights Act. The
+  exemption for job applicant, employee, owner, director, officer, medical staff and contractor
+  data in Cal. Civ. Code 1798.145(m) became inoperative on 1 January 2023. Since then California
+  instructors who are employees or independent contractors have the full set of CCPA rights. The
+  CCPA binds a "business": a for-profit entity that does business in California, determines the
+  purposes and means of processing, and meets a threshold, such as annual gross revenue over USD
+  25,000,000 as adjusted under 1798.199.95(d)(5) (Cal. Civ. Code 1798.140(d)). Whether the organisation
+  meets this test is for legal to confirm.
+
+laws:
+  - name: California Consumer Privacy Act of 2018, as amended by the California Privacy Rights Act
+    citation: "Cal. Civ. Code 1798.100 et seq."
+  - name: CCPA regulations
+    citation: >-
+      Cal. Code Regs. tit. 11, 7000 et seq., including the CCPA Updates, Cybersecurity Audit, Risk
+      Assessment, ADMT and Insurance regulations (approved by OAL 22 September 2025, effective 1
+      January 2026)
+  - name: Data breach notification statute, as amended by SB 446 (2025)
+    citation: "Cal. Civ. Code 1798.82"
+
+regulator:
+  name: California Privacy Protection Agency (CalPrivacy)
+  url: https://cppa.ca.gov
+
+# The CCPA has no lawful-basis requirement. Collection, use, retention and sharing must be
+# reasonably necessary and proportionate to the disclosed purpose, or to another disclosed and
+# compatible purpose; a new incompatible purpose needs a new notice first (Cal. Civ. Code
+# 1798.100(a)(1), (c)). disclosed-purpose records that, for every purpose. The GDPR basis from
+# the Irish base still applies to California instructors.
+lawful_bases:
+  tm:purpose/clearance-decision: [disclosed-purpose]
+  tm:purpose/coaching: [disclosed-purpose]
+  tm:purpose/calibration-and-audit: [disclosed-purpose]
+  tm:purpose/quality-review: [disclosed-purpose]
+  tm:purpose/bench-decision: [disclosed-purpose]
+  tm:purpose/staffing-check: [disclosed-purpose]
+  tm:purpose/train-the-trainer: [disclosed-purpose]
+  tm:purpose/record-of-actions: [disclosed-purpose]
+  tm:purpose/privacy-administration: [disclosed-purpose]
+
+consent_valid_in_employment: false
+
+# "Applies" says when the CCPA requires the element.
+notice_elements:
+  - id: ca-categories
+    requirement: >-
+      A list of the categories of personal information to be collected, written so the
+      instructor understands what is collected. Applies always.
+    citation: "Cal. Civ. Code 1798.100(a)(1); 11 CCR 7012(e)(1)"
+  - id: ca-sensitive-categories
+    requirement: >-
+      The categories of sensitive personal information to be collected, if any. Applies if
+      sensitive personal information is collected.
+    citation: "Cal. Civ. Code 1798.100(a)(2); 11 CCR 7012(e)(1)"
+  - id: ca-purposes
+    requirement: The purposes for which each category is collected and used. Applies always.
+    citation: "Cal. Civ. Code 1798.100(a)(1)-(2); 11 CCR 7012(e)(2)"
+  - id: ca-sold-or-shared
+    requirement: >-
+      Whether each category is sold or shared. This programme intends neither. Applies always.
+    citation: "Cal. Civ. Code 1798.100(a)(1); 11 CCR 7012(e)(3)"
+  - id: ca-retention-per-category
+    requirement: >-
+      How long each category will be kept, or the criteria used to set that period. GDPR asks for
+      the same per purpose; the CCPA asks for it per category. Applies always.
+    citation: "Cal. Civ. Code 1798.100(a)(3); 11 CCR 7012(e)(4)"
+  - id: ca-opt-out-link
+    requirement: >-
+      The link to the Notice of Right to Opt-out of Sale/Sharing. Applies if data is sold or shared.
+    citation: "11 CCR 7012(e)(5)"
+  - id: ca-privacy-policy-link
+    requirement: >-
+      A link to the business's privacy policy, or for an offline notice, where it can be found
+      online. Applies always.
+    citation: "11 CCR 7012(e)(6)"
+notice_timing:
+  rule: >-
+    At or before the point of collection. A business that has not given the notice must not
+    collect the personal information.
+  citation: "Cal. Civ. Code 1798.100(a); 11 CCR 7012(c)-(d)"
+
+# See review_notes: personnel-records. The only statutory period found (a four-year minimum for
+# personnel records) may not reach these records, and no data category could be named for it.
+retention_limits: []
+
+# Criterion is the screening criterion id (src/teachermodel/pages.py, _DPIA_CRITERIA) a CCPA
+# risk-assessment trigger (11 CCR 7150(b)) maps to. A trigger with no matching criterion keeps an
+# id of its own, and a trigger the base screening does not cover opens the overlay's dpia-delta step.
+dpia_triggers:
+  - criterion: ca-sell-or-share
+    citation: "11 CCR 7150(b)(1): selling or sharing personal information."
+  - criterion: sensitive-data
+    citation: >-
+      11 CCR 7150(b)(2): processing sensitive personal information. Employee data used only for
+      pay, work authorisation, benefits, accommodation or wage reporting is excepted.
+  - criterion: automated-decision
+    citation: >-
+      11 CCR 7150(b)(3): using ADMT for a significant decision concerning a consumer.
+  - criterion: prevents-rights-or-service
+    citation: >-
+      11 CCR 7150(b)(3): using ADMT for a significant decision concerning a consumer.
+  - criterion: evaluation-scoring
+    citation: >-
+      11 CCR 7150(b)(4): using automated processing to infer or extrapolate a person's ability,
+      aptitude, performance at work or behaviour, based on systematic observation of them as an
+      employee or independent contractor.
+  - criterion: systematic-monitoring
+    citation: >-
+      11 CCR 7150(b)(4): using automated processing to infer or extrapolate a person's ability,
+      aptitude, performance at work or behaviour, based on systematic observation of them as an
+      employee or independent contractor.
+  - criterion: vulnerable-subjects
+    citation: >-
+      11 CCR 7150(b)(4): using automated processing to infer or extrapolate a person's ability,
+      aptitude, performance at work or behaviour, based on systematic observation of them as an
+      employee or independent contractor.
+  - criterion: sensitive-data
+    citation: >-
+      11 CCR 7150(b)(5): inferring the same traits from presence at a sensitive location.
+  - criterion: innovative-technology
+    citation: >-
+      11 CCR 7150(b)(6): processing personal information intended to train ADMT for a significant
+      decision, or identification, facial-recognition or emotion-recognition technology.
+
+transfers:
+  - rule: >-
+      The CCPA has no cross-border transfer rule. Disclosures to service providers and
+      contractors need a written contract with terms the statute and regulations set. Transfers
+      out of the EEA follow the base profile.
+    citation: "Cal. Civ. Code 1798.100(d); Cal. Civ. Code 1798.140"
+
+# Deadlines in calendar days. Rights with a deadline in business days carry it in the citation.
+rights:
+  - right: know
+    deadline_days: 45
+    citation: "Cal. Civ. Code 1798.110, 1798.115; 1798.130(a)(2)(A); 11 CCR 7021(b)"
+  - right: delete
+    deadline_days: 45
+    citation: "Cal. Civ. Code 1798.105; 1798.130(a)(2)(A); 11 CCR 7021(b)"
+  - right: correct
+    deadline_days: 45
+    citation: "Cal. Civ. Code 1798.106; 1798.130(a)(2)(A); 11 CCR 7021(b)"
+  - right: opt-out-sale-share
+    citation: >-
+      Cal. Civ. Code 1798.120; 11 CCR 7026(f). Deadline 15 business days. The programme does not
+      sell or share data, so no opt-out link is needed if that holds.
+  - right: limit-sensitive-pi
+    citation: >-
+      Cal. Civ. Code 1798.121; 11 CCR 7027(g). Deadline 15 business days. Does not apply to
+      sensitive personal information collected or processed without the purpose of inferring
+      characteristics (1798.121(d)).
+  - right: no-retaliation
+    citation: "Cal. Civ. Code 1798.125"
+  - right: admt-access-opt-out-appeal
+    citation: >-
+      11 CCR 7221, 7222. Applies when the business uses ADMT for a significant decision, from 1
+      January 2027.
+
+breach_notification:
+  individuals: >-
+    Notify affected California residents in the most expedient time possible and without
+    unreasonable delay, and within 30 calendar days of discovering or being told of the breach.
+    Delay is allowed for law enforcement needs, or to determine the scope of the breach and
+    restore the system's integrity.
+  citation: "Cal. Civ. Code 1798.82(a), as amended by SB 446, effective 1 January 2026"
+
+sources:
+  - title: >-
+      California Consumer Privacy Act of 2018, Cal. Civ. Code 1798.100-1798.199.100, CPPA
+      compilation "effective 7/15/2024, AB 3286 update", posted August 2024
+    url: https://cppa.ca.gov/regulations/pdf/cppa_act.pdf
+    accessed: "2026-10-24"
+  - title: >-
+      CPPA, Text of Regulations (CCPA Updates, Cyber, Risk, ADMT and Insurance Regulations),
+      approved text
+    url: https://cppa.ca.gov/regulations/pdf/ccpa_updates_cyber_risk_admt_appr_text.pdf
+    accessed: "2026-10-24"
+  - title: CPPA rulemaking page, CCPA Updates, Cybersecurity Audits, Risk Assessments, ADMT and Insurance
+    url: https://cppa.ca.gov/regulations/ccpa_updates.html
+    accessed: "2026-10-24"
+  - title: CPPA, Regulations (completed packages and preliminary rulemaking activities)
+    url: https://cppa.ca.gov/regulations/
+    accessed: "2026-10-24"
+  - title: CPPA, Employee Data (preliminary rulemaking activity)
+    url: https://cppa.ca.gov/regulations/employee_data.html
+    accessed: "2026-10-24"
+  - title: Cal. Civ. Code 1798.82 as amended by SB 446 (2025); secondary summary, National Law Review
+    url: https://natlawreview.com/article/california-enacts-30-day-data-breach-notification-deadline
+    accessed: "2026-10-24"
+  - title: Cal. Gov. Code 12946 (record retention under FEHA); secondary reproduction, california.public.law
+    url: https://california.public.law/codes/government_code_section_12946
+    accessed: "2026-10-24"
+
+status: draft
+drafted_by: ai-assisted
+
+review_notes:
+  # Sources: what was and was not fetched.
+  - >-
+    source CCPA statute (CPPA compilation): fetched. leginfo.legislature.ca.gov returned HTTP 403
+    for every section. This compilation predates any amendments enacted after July 2024. Legal
+    must check the current code text.
+  - "source CPPA regulations text: fetched. Sections 7001, 7012, 7021, 7026, 7027, 7150, 7155, 7200 and 7221 were read."
+  - "source CPPA rulemaking page: fetched. It states OAL approval and filing on 22 September 2025, effective 1 January 2026."
+  - "source CPPA regulations index and employee-data page: fetched."
+  - >-
+    source Cal. Civ. Code 1798.82 / SB 446 (National Law Review): not fetched as a primary text.
+    The primary text was not reached (leginfo returned HTTP 403). Facts were taken from search
+    summaries of secondary sources: signed 3 October 2025, effective 1 January 2026, 30 calendar
+    days. Legal must verify against the code.
+  - >-
+    source Cal. Gov. Code 12946 (california.public.law): not fetched; seen in search results only.
+    Legal must verify the text and whether it reaches these records.
+  - >-
+    statute-version: the CCPA text used is the CPPA's July 2024 compilation. Amendments enacted in
+    2025 or 2026 were not checked.
+
+  # Applicability and bases.
+  - >-
+    business-threshold: the overlay only applies if the organisation is a CCPA "business" that does
+    business in California. Legal to confirm, including the current adjusted revenue threshold.
+  - >-
+    contractors-as-consumers: independent contractors and partner instructors resident in
+    California are consumers too. Legal to confirm whether the organisation or the partner organisation
+    is the business for partner instructors.
+  - >-
+    basis-vocabulary: disclosed-purpose is not a legal basis. It records that California law has
+    no basis requirement and limits use to the disclosed purpose. The GDPR basis from the Irish
+    base still applies to California instructors.
+  - >-
+    consent-flag: the CCPA does not use lawful bases, so there is no consent basis to test. The
+    flag consent_valid_in_employment is set false because no purpose may rest on consent; the base
+    profile's position (consent rarely valid at work) still governs the choice of basis. Legal to
+    confirm the representation.
+  - >-
+    regulator: the California Attorney General also enforces the CCPA.
+  - >-
+    no-sale-or-share: the notice states nothing is sold or shared. Sharing in CCPA terms means
+    cross-context behavioural advertising; legal to confirm no disclosure in this programme counts.
+  - >-
+    retention-per-category: the CCPA notice states retention per category, the GDPR notice per
+    purpose. retention@2 keys entries on category and purpose, so both views can be derived.
+    Legal to confirm one notice can carry both.
+  - >-
+    employee-rulemaking: the CPPA invited preliminary comments on notices and disclosures and
+    employee data; the comment period closed on 20 May 2026. No formal rulemaking was shown on
+    the CPPA site on the access date (24 October 2026). Re-check before launch and before legal
+    signs this profile, as the spec requires.
+
+  # Retention.
+  - >-
+    retention-rule: keep personal information for each disclosed purpose no longer than
+    reasonably necessary for that purpose (Cal. Civ. Code 1798.100(a)(3)).
+  - >-
+    personnel-records: Cal. Gov. Code 12946 (as amended by SB 807, effective 1 January 2022) sets
+    a four-year minimum from the date of the employment action taken for applications, personnel,
+    membership and referral records under the Fair Employment and Housing Act. Cal. Labor Code
+    1198.5 gives employees a right to inspect personnel records (drafter's knowledge, not
+    fetched). Legal to decide whether clearance, observation and coaching records are personnel
+    records. If they are, a 48-month minimum for the right categories and a 30-day inspection
+    duty may apply. No entry is in retention_limits because the category could not be named.
+
+  # DPIA and automated decisions.
+  - >-
+    risk-assessment-rule: the CCPA has no DPIA. Its regulations require a risk assessment before
+    starting processing that presents significant risk (11 CCR 7150). dpia_triggers maps the
+    triggers to the base screening criteria. A trigger not covered by the base screening opens the
+    overlay's dpia-delta step.
+  - >-
+    risk-assessment-definitions: systematic observation is methodical and regular or continuous
+    observation, including by video or audio recording or live-streaming (11 CCR 7001(eee)). A
+    significant decision includes employment or independent contracting opportunities or
+    compensation: hiring; allocation or assignment of work, and pay; promotion; demotion,
+    suspension and termination (11 CCR 7001(ddd)(4)). ADMT is technology that processes personal
+    information and uses computation to replace, or substantially replace, human decisionmaking;
+    human involvement needs a reviewer who knows how to use the output, reviews it with other
+    relevant information, and has authority to make or change the decision (11 CCR 7001(e)).
+  - >-
+    risk-assessment-timing: conduct and document before starting the processing (11 CCR
+    7155(a)(1)). Review at least every three years; update within 45 calendar days of a material
+    change (7155(a)(2)-(3)). Processing started before 1 January 2026 and continuing: assess by 31
+    December 2027 (7155(b)). Submit to the CPPA per 7157; the first submission date in the text is
+    1 April 2028 (7157(a)(1)). Keep each assessment while processing continues or five years
+    after completion, whichever is later (7155(c)).
+  - >-
+    admt-obligations: from 1 January 2027 a business using ADMT for a significant decision gives a
+    pre-use notice, an opt-out (or an appeal to a human reviewer with authority to overturn,
+    instead of the opt-out), and access to information about the ADMT (11 CCR 7200(b), 7220,
+    7221(a)-(b), 7222).
+  - >-
+    risk-assessment-likely: 11 CCR 7150(b)(4) covers automated processing that infers performance
+    at work from systematic observation of employees or contractors, and "systematic
+    observation" includes video recording. The rules average observation scores and compare
+    outcomes with a baseline. The drafter thinks this may be "automated processing to infer" even
+    though people decide. If so, a risk assessment is due before the processing starts (or by 31
+    December 2027 for processing begun before 2026).
+  - >-
+    admt-staffing-block: allocation or assignment of work is a significant decision. Clearances
+    are human decisions, so the system is probably not ADMT. The staffing check's automatic block
+    on an uncleared instructor deserves a look under the human-involvement test (11 CCR 7001(e)).
+    The 7221(b)(3) exception for allocation of work may also be relevant.
+
+  # Transfers, rights and incidents.
+  - >-
+    transfers-service-providers: contract terms for service providers were not extracted for this
+    draft.
+  - >-
+    rights-confirm-receipt: within 10 business days of a request to delete, correct or know (and
+    to access or appeal ADMT), confirm receipt and say how the request will be handled (11 CCR
+    7021(a)).
+  - >-
+    rights-deadline: respond within 45 calendar days of receipt, counted from receipt whatever
+    the time needed to verify. Extendable once by a further 45 days when reasonably necessary,
+    with notice within the first 45 days (Cal. Civ. Code 1798.130(a)(2)(A); 11 CCR 7021(b)).
+  - >-
+    rights-methods: offer two or more designated methods, including at least a toll-free
+    telephone number. A business operating exclusively online with a direct relationship may offer
+    only an email address (Cal. Civ. Code 1798.130(a)(1)(A)).
+  - >-
+    rights-lookback: a request to know covers the 12 months before the request. On request it
+    extends further back, to data collected on or after 1 January 2022, unless impossible or
+    disproportionate (Cal. Civ. Code 1798.130(a)(2)(B)).
+  - >-
+    sensitive-pi: sensitive personal information means government identifiers; account log-in or
+    financial account with credentials; precise geolocation; racial or ethnic origin, citizenship
+    or immigration status, religious or philosophical beliefs, union membership; contents of mail,
+    email and texts unless the business is the recipient; genetic data; biometric processing to
+    identify; health; sex life or sexual orientation (Cal. Civ. Code 1798.140(ae)). None is
+    intended. hr_ref in the identity block is an HR reference, not a government identifier;
+    legal to confirm. Free-text notes could mention health incidentally.
+  - >-
+    breach-text-unverified: the 30-day breach deadline and AG timing come from secondary sources
+    only.
+  - >-
+    breach-attorney-general: where more than 500 California residents are notified for one
+    breach, send a sample copy of the notice to the Attorney General (Cal. Civ. Code 1798.82(f)).
+    Secondary sources differ on the new deadline (15 calendar days after notifying residents, per
+    one source). There is no regulator window in hours, so regulator_hours is absent.
+  - >-
+    breach-scope: 1798.82 covers "personal information" in its own narrow sense (a name with a
+    government ID, account credentials, medical or similar data, or a username or email with a
+    password). Most records here may fall outside it. This scope reading is the drafter's
+    knowledge, not checked against the code text. The GDPR base still requires the DPC notice
+    within 72 hours for every California instructor.
+  - >-
+    private-right-of-action: a person may sue when their nonencrypted and nonredacted personal
+    information (as defined in 1798.81.5), or an email address with a password or security
+    answer, is stolen or disclosed because the business failed to keep reasonable security. The
+    employee exemption never applied to this section (Cal. Civ. Code 1798.150, 1798.145(m)(3)).

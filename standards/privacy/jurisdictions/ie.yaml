@@ -1,0 +1,454 @@
+# Jurisdiction profile: Ireland (base). Contract: tm:contract/jurisdiction@1.
+# Design: docs/specs/2026-10-24-privacy-jurisdictions-design.md, sections 2 and 3.
+#
+# DRAFT. AI-assisted research notes for internal legal. Not legal advice. Nothing here counts until
+# internal legal signs the exact bytes of this file on the generated review page (workflow
+# tm:workflow/privacy-base, step tm:step/base-profile-verified). Verification is that bound sign-off,
+# never a field in this file. Detail the contract has no field for (source notes, derivations, open
+# questions) is in review_notes. Where a source could not be fetched, review_notes says so.
+
+schema_version: 1
+id: tm:jurisdiction/ie
+name: "Ireland (base profile, GDPR and the Data Protection Act 2018)"
+codes: [IE]
+role: base
+scope: >-
+  The organisation is established in Ireland. GDPR applies to processing in the context of the
+  activities of an establishment in the Union, whether or not the processing takes place in the
+  Union (GDPR Art. 3(1)). So this profile covers every instructor, wherever they work. An
+  overlay adds duties for an instructor's own jurisdiction.
+
+laws:
+  - name: General Data Protection Regulation
+    citation: "Regulation (EU) 2016/679"
+  - name: Data Protection Act 2018 (Ireland), as revised
+    citation: >-
+      No. 7 of 2018. Relevant sections: s.34 designation of a data protection officer; s.41
+      further processing for another purpose (narrow grounds); s.57 Article 22 exception where a
+      decision is authorised by an enactment; s.60 restrictions on data subject rights, including
+      for legal claims; s.108 complaints to the Commission.
+
+regulator:
+  name: Data Protection Commission (An Coimisiun um Chosaint Sonrai)
+  url: https://www.dataprotection.ie
+
+# The bases legal may choose from for each purpose. The proposal for each is in purposes.yaml.
+# Contract is listed only where the processing is objectively necessary to perform the
+# instructor's contract. Legitimate interests needs a documented balancing test and brings the
+# right to object (Art. 21(1)). Consent is not allowed for any current purpose.
+lawful_bases:
+  tm:purpose/clearance-decision: [legitimate-interests, contract]
+  tm:purpose/coaching: [legitimate-interests, contract]
+  tm:purpose/calibration-and-audit: [legitimate-interests]
+  tm:purpose/quality-review: [legitimate-interests]
+  tm:purpose/bench-decision: [legitimate-interests, contract]
+  tm:purpose/staffing-check: [legitimate-interests, contract]
+  tm:purpose/train-the-trainer: [legitimate-interests, contract]
+  tm:purpose/record-of-actions: [legitimate-interests, legal-obligation]
+  tm:purpose/privacy-administration: [legal-obligation, legitimate-interests]
+
+consent_valid_in_employment: false
+
+# Mandatory notice content. The notice template marks each element by id, and rendering fails if a
+# marker is missing or its section is empty. Art. 13 applies to data collected from the instructor;
+# Art. 14 to data obtained otherwise (observers' scores, roster data from HR, outcome aggregates).
+# "Applies" says when the GDPR requires the element; the template always carries every element.
+notice_elements:
+  - id: controller-identity
+    requirement: Identity and contact details of the controller and, if any, its representative. Applies always.
+    citation: "GDPR Art. 13(1)(a); Art. 14(1)(a)"
+  - id: dpo-contact
+    requirement: Contact details of the data protection officer. Applies if a DPO is designated.
+    citation: "GDPR Art. 13(1)(b); Art. 14(1)(b); DPA 2018 s.34"
+  - id: purposes-and-bases
+    requirement: The purposes of the processing and the legal basis for each. Applies always.
+    citation: "GDPR Art. 13(1)(c); Art. 14(1)(c)"
+  - id: legitimate-interests
+    requirement: >-
+      The legitimate interests pursued, for each purpose that relies on them. Applies if a purpose
+      rests on legitimate interests.
+    citation: "GDPR Art. 13(1)(d); Art. 14(2)(b)"
+  - id: categories-of-data
+    requirement: The categories of personal data concerned. Applies if data is not obtained from the instructor.
+    citation: "GDPR Art. 14(1)(d)"
+  - id: recipients
+    requirement: The recipients or categories of recipients, if any. Applies always.
+    citation: "GDPR Art. 13(1)(e); Art. 14(1)(e)"
+  - id: transfers
+    requirement: >-
+      Any intended transfer to a third country, whether an adequacy decision exists, the
+      safeguards used and how to get a copy of them. Applies if data is transferred outside the EEA.
+    citation: "GDPR Art. 13(1)(f); Art. 14(1)(f)"
+  - id: retention
+    requirement: How long the data is stored, or the criteria used to set that period. Applies always.
+    citation: "GDPR Art. 13(2)(a); Art. 14(2)(a)"
+  - id: rights
+    requirement: >-
+      The rights of access, rectification, erasure, restriction, objection and, where it applies,
+      portability. Applies always.
+    citation: "GDPR Art. 13(2)(b); Art. 14(2)(c)"
+  - id: right-to-object
+    requirement: >-
+      The right to object, brought explicitly to the instructor's attention and presented clearly
+      and separately from other information. Applies if a purpose rests on legitimate interests.
+    citation: "GDPR Art. 21(1), (4)"
+  - id: withdraw-consent
+    requirement: >-
+      The right to withdraw consent at any time, without affecting earlier processing. Applies if
+      a purpose rests on consent.
+    citation: "GDPR Art. 13(2)(c); Art. 14(2)(d)"
+  - id: complaint
+    requirement: >-
+      The right to lodge a complaint with a supervisory authority (in Ireland, the DPC). Applies always.
+    citation: "GDPR Art. 13(2)(d); Art. 14(2)(e); Art. 77"
+  - id: statutory-or-contractual-requirement
+    requirement: >-
+      Whether providing the data is a statutory or contractual requirement, or needed to enter a
+      contract, whether the instructor must provide it, and what happens if they do not. Applies
+      if data is collected from the instructor.
+    citation: "GDPR Art. 13(2)(e)"
+  - id: source
+    requirement: >-
+      The source of the data, and whether it came from publicly accessible sources. Applies if
+      data is not obtained from the instructor.
+    citation: "GDPR Art. 14(2)(f)"
+  - id: automated-decisions
+    requirement: >-
+      Whether there is automated decision-making, including profiling, and if so meaningful
+      information about the logic and its likely consequences. Applies always. This draft states
+      that there is none: named people make every decision.
+    citation: "GDPR Art. 13(2)(f); Art. 14(2)(g); Art. 22"
+notice_timing:
+  rule: >-
+    Art. 13 information is given when the data is obtained. Art. 14 information is given within a
+    reasonable period and at the latest within one month, or at first communication with the
+    instructor if earlier.
+  citation: "GDPR Art. 13(1); Art. 14(3)"
+
+# No statutory period was found for instructor training, observation, coaching or clearance
+# records, so there is no limit to state (see review_notes: retention).
+retention_limits: []
+
+# Each criterion is a screening criterion id used by the DPIA screening page
+# (src/teachermodel/pages.py, _DPIA_CRITERIA). The citation names the WP248 rev.01 criterion
+# number, the GDPR Art. 35(3) case and the DPC list items it matches.
+dpia_triggers:
+  - criterion: evaluation-scoring
+    citation: >-
+      WP248 criterion 1: evaluation or scoring, including profiling and predicting, especially
+      performance at work. DPC list item 5.
+  - criterion: automated-decision
+    citation: >-
+      WP248 criterion 2: automated decision-making with legal or similarly significant effect.
+      GDPR Art. 35(3)(a). DPC list item 3.
+  - criterion: systematic-monitoring
+    citation: >-
+      WP248 criterion 3: systematic monitoring, used to observe, monitor or control data
+      subjects. GDPR Art. 35(3)(c). DPC list item 4.
+  - criterion: sensitive-data
+    citation: >-
+      WP248 criterion 4: special-category, criminal-offence or other highly personal data. GDPR
+      Art. 35(3)(b). DPC list items 6, 7 and 10.
+  - criterion: large-scale
+    citation: "WP248 criterion 5: data processed on a large scale. DPC list items 1, 5 and 10."
+  - criterion: dataset-matching
+    citation: "WP248 criterion 6: matching or combining datasets beyond reasonable expectations. DPC list item 9."
+  - criterion: vulnerable-subjects
+    citation: "WP248 criterion 7: data concerning vulnerable data subjects. WP248 lists employees. DPC list item 2."
+  - criterion: innovative-technology
+    citation: >-
+      WP248 criterion 8: innovative use or new technological or organisational solutions. DPC
+      list item 6.
+  - criterion: prevents-rights-or-service
+    citation: >-
+      WP248 criterion 9: processing that prevents data subjects from exercising a right or using
+      a service or contract. DPC list item 3.
+
+transfers:
+  - rule: >-
+      A transfer outside the EEA needs an adequacy decision, appropriate safeguards (for example
+      standard contractual clauses), or an Art. 49 derogation.
+    citation: "GDPR Arts 44-49"
+
+# deadline_days: Art. 12(3) gives one month, extendable by two further months (review_notes:
+# rights-deadline). One month is written here as 30 days.
+rights:
+  - right: access
+    deadline_days: 30
+    citation: "GDPR Art. 15; Art. 12(3)"
+  - right: rectification
+    deadline_days: 30
+    citation: "GDPR Art. 16; Art. 12(3)"
+  - right: erasure
+    deadline_days: 30
+    citation: "GDPR Art. 17; Art. 12(3)"
+  - right: restriction
+    deadline_days: 30
+    citation: "GDPR Art. 18; Art. 12(3)"
+  - right: portability
+    deadline_days: 30
+    citation: "GDPR Art. 20; Art. 12(3). Applies when the basis is consent or contract and processing is automated."
+  - right: object
+    deadline_days: 30
+    citation: >-
+      GDPR Art. 21(1); Art. 12(3). Applies when the basis is legitimate interests. The controller
+      must stop unless it shows compelling legitimate grounds that override the instructor's
+      interests, or needs the data for legal claims.
+  - right: not-subject-to-automated-decision
+    deadline_days: 30
+    citation: >-
+      GDPR Art. 22; DPA 2018 s.57; Art. 12(3). Applies when a decision is based solely on
+      automated processing with legal or similarly significant effects.
+  - right: complaint
+    citation: "GDPR Art. 77; DPA 2018 s.108"
+
+breach_notification:
+  regulator_hours: 72
+  individuals: >-
+    Without undue delay, when the breach is likely to result in a high risk to the instructor's
+    rights and freedoms.
+  citation: "GDPR Art. 33(1); Art. 34(1)"
+
+sources:
+  - title: Regulation (EU) 2016/679 (General Data Protection Regulation), EUR-Lex
+    url: https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng
+    accessed: "2026-10-24"
+  - title: GDPR text, Arts 12, 13, 33 and 88 (secondary reproduction, intersoft consulting)
+    url: https://gdpr-info.eu/
+    accessed: "2026-10-24"
+  - title: Data Protection Act 2018, Revised Act (Law Reform Commission), updated to 16 July 2026
+    url: https://revisedacts.lawreform.ie/eli/2018/act/7/front/revised/en/html
+    accessed: "2026-10-24"
+  - title: DPC, List of Types of Data Processing Operations which require a DPIA (15 November 2018 rev)
+    url: https://www.dataprotection.ie/sites/default/files/uploads/2018-11/Data-Protection-Impact-Assessment.pdf
+    accessed: "2026-10-24"
+  - title: DPC, Data Protection Impact Assessments
+    url: https://www.dataprotection.ie/en/organisations/know-your-obligations/data-protection-impact-assessments
+    accessed: "2026-10-24"
+  - title: >-
+      Article 29 Working Party, WP 248 rev.01, Guidelines on DPIA (adopted 4 April 2017, last
+      revised 4 October 2017; endorsed by the EDPB 25 May 2018)
+    url: https://ec.europa.eu/newsroom/article29/items/611236
+    accessed: "2026-10-24"
+  - title: EDPB Guidelines 05/2020 on consent under Regulation 2016/679, version 1.1 (adopted 4 May 2020)
+    url: https://www.edpb.europa.eu/our-work-tools/our-documents/guidelines/guidelines-052020-consent-under-regulation-2016679_en
+    accessed: "2026-10-24"
+  - title: DPC, Data Protection in the Workplace, Employer Guidance
+    url: https://www.dataprotection.ie/en/dpc-guidance/data-protection-in-the-workplace-employer-guidance
+    accessed: "2026-10-24"
+
+status: draft
+drafted_by: ai-assisted
+
+review_notes:
+  # Sources: what was and was not fetched.
+  - >-
+    source EUR-Lex (GDPR): not fetched. EUR-Lex returned an empty page for three URL forms (ELI,
+    HTML, PDF). Article wording was checked against gdpr-info.eu for Arts 12, 13, 33 and 88, and
+    WP248 quotes Art. 35(3). Other article citations are from the drafter's knowledge and must be
+    checked against EUR-Lex.
+  - >-
+    source gdpr-info.eu: fetched; a secondary source used only because EUR-Lex was unreachable.
+  - >-
+    source Data Protection Act 2018 (revised act): fetched. Table of contents, s.41 and s.57 read.
+    irishstatutebook.ie returned HTTP 403. The revised act states it is up to date with changes
+    known to be in force as of 13 October 2026. Section 60 was seen only in its table of contents
+    and a search summary.
+  - "source DPC list of processing operations requiring a DPIA, and the DPC DPIA page: fetched."
+  - "source WP248 rev.01: fetched. PDF read from the document link on the page; criteria on pages 9-11."
+  - >-
+    source EDPB Guidelines 05/2020: the EDPB page was read; its English PDF URL returned 404.
+    Paras 21-23 were read from the same version 1.1 PDF hosted by the Romanian supervisory
+    authority (https://www.dataprotection.ro/servlet/ViewDocument?id=2491).
+  - >-
+    source DPC employer guidance: HTTP 403, not fetched. Not used for any rule in this file.
+    Legal should check it.
+  - >-
+    sources-unreachable: EUR-Lex, irishstatutebook.ie and the DPC employer guidance could not be
+    fetched. Article citations not checked against gdpr-info.eu rely on the drafter's knowledge
+    and must be checked.
+  - >-
+    notice-timing: the Art. 14(3) wording is from the drafter's knowledge; EUR-Lex was not reachable.
+
+  # Consent and lawful bases.
+  - >-
+    consent: consent is rarely valid at work. The employer and employee relationship creates an
+    imbalance of power, so consent is unlikely to be freely given. The EDPB names "fill out
+    assessment forms" as an example. Consent is valid only in exceptional cases where refusing
+    has no adverse consequences at all (EDPB Guidelines 05/2020 v1.1, paras 21-23; GDPR Art.
+    4(11); Art. 7(4)). Hence consent_valid_in_employment is false.
+  - >-
+    consent-contractors: the EDPB text speaks of employees. Contract and partner instructors also
+    depend on the organisation for work, so this draft treats the same caution as applying to them.
+    Legal to confirm.
+  - >-
+    basis-legitimate-interests: legitimate interests is proposed for six of eight purposes. Each
+    needs a written balancing test (purpose, necessity, balance). It also gives instructors the
+    right to object, which the notice must state separately (Art. 21(4)). Legal to choose between
+    it and contract.
+  - >-
+    basis-contract: contract is listed as an alternative where the instructor is engaged to teach.
+    EDPB Guidelines 2/2019 on Art. 6(1)(b) read "necessary" strictly. They were not fetched for
+    this draft.
+  - >-
+    basis-accountability-records: record-of-actions and privacy-administration may rest on Art.
+    6(1)(c) for the parts that exist to meet GDPR duties. Legal to decide; legitimate interests is
+    the fallback.
+  - >-
+    no-consent-purpose: no purpose is proposed on consent. The baseline self-assessment is
+    required in W1, and EDPB para 21 names assessment forms as a case where consent is not free. A
+    future optional use (reusing a recording in teaching material) would be a consent candidate
+    (design section 5).
+  - >-
+    lawful basis for tm:purpose/clearance-decision: the organisation has an interest in sessions being
+    taught by instructors cleared against a written standard. Contract may fit for contract and
+    partner instructors engaged to deliver sessions. Not consent: clearance decides teaching work.
+  - >-
+    lawful basis for tm:purpose/coaching: every active instructor is in the coaching cycle (spec
+    v0.2, W7). It is not optional, so consent would not be freely given.
+  - >-
+    lawful basis for tm:purpose/calibration-and-audit: checking that observers score reliably
+    protects instructors from unfair decisions. It also processes data about the observers
+    themselves.
+  - >-
+    lawful basis for tm:purpose/quality-review: comparing delivery outcomes with the cohort
+    baseline finds where coaching should focus. It never triggers a bench decision on its own.
+  - >-
+    lawful basis for tm:purpose/bench-decision: a bench decision (renew, convert, return to
+    co-teaching, exit) is a decision about an instructor's teaching work, taken on a complete
+    evidence pack by the head of training. Added with the draft of tm:purpose/bench-decision
+    (decision 0014), so legal reads it with purposes.yaml. Contract may fit for engaged instructors
+    where the decision applies the engagement itself; legitimate interests needs a balancing test
+    and brings the right to object. Legal to decide, and to decide whether Art. 22 (decisions
+    based solely on automated processing) is engaged at all: a person decides, and the rules only
+    check that the evidence is complete.
+  - >-
+    lawful basis for tm:purpose/staffing-check: only cleared instructors are staffed on a module.
+    Scheduling sees clearance status only (decision 0005).
+  - >-
+    lawful basis for tm:purpose/train-the-trainer: the pathway, including the baseline
+    self-assessment, is required before an instructor leads sessions. EDPB 05/2020 para 21 names
+    assessment forms as a case where consent is not free.
+  - >-
+    lawful basis for tm:purpose/record-of-actions: the append-only log shows who decided what on
+    which evidence. That supports replies, appeals and the defence of claims. Parts of it may also
+    serve accountability duties (Art. 5(2), Art. 24, Art. 30); legal to decide whether Art.
+    6(1)(c) applies to them.
+  - >-
+    lawful basis for tm:purpose/privacy-administration: recording which notice version each
+    instructor received, and when, shows that Arts 13 and 14 were met. Legal to confirm that the
+    GDPR's own duties are a legal obligation for Art. 6(1)(c) purposes, or to use legitimate
+    interests instead.
+  - >-
+    contractors-and-partners: partner instructors are engaged through a partner organisation.
+    Legal to confirm the organisation's role (controller, joint controller) for their data and what the
+    partner lead receives (clearance status only, decision 0005).
+  - >-
+    art-14-notice: much of the data is not collected from the instructor: observers' scores and
+    notes, roster data from HR or vendors, outcome aggregates. The notice therefore needs the Art.
+    14 elements (categories, source) as well as Art. 13.
+  - >-
+    dpo: the notice element dpo-contact assumes the organisation has designated a DPO (setup has a dpo
+    role). Legal to confirm.
+
+  # DPIA.
+  - >-
+    dpia-rule: a DPIA is required before processing that is likely to result in a high risk (Art.
+    35(1)). Art. 35(3) and the DPC's Art. 35(4) list name cases. WP248 says processing that meets
+    two of its nine criteria will in most cases need a DPIA, and sometimes one is enough. The DPC
+    list applies its items "where a documented screening or preliminary risk assessment
+    indicates" high risk. WP248's own table lists "a company systematically monitoring its
+    employees' activities" as meeting two criteria: systematic monitoring and vulnerable data
+    subjects.
+  - >-
+    dpia-art-35-3: Art. 35(3) cases are (a) systematic and extensive evaluation based on
+    automated processing, including profiling, on which decisions with legal or similarly
+    significant effects are based; (b) large-scale processing of special categories or
+    criminal-offence data; (c) systematic monitoring of a publicly accessible area on a large
+    scale.
+  - >-
+    dpia-dpc-list: the DPC list items are 1 large-scale use of personal data for a purpose other
+    than the one it was collected for (Art. 6(4)); 2 profiling vulnerable persons, including
+    children, to target marketing or online services; 3 profiling, algorithmic means or
+    special-category data used to decide access to services, or with legal or similarly
+    significant effects; 4 systematically monitoring, tracking or observing individuals' location
+    or behaviour; 5 profiling individuals on a large scale; 6 biometric identification combined
+    with another WP248 criterion; 7 genetic data combined with another WP248 criterion; 8
+    indirectly sourced data where transparency duties are not met; 9 combining or linking
+    datasets for profiling or behavioural analysis; 10 large-scale processing where the DPA 2018
+    requires suitable and specific measures.
+  - >-
+    dpia-likely-required: the setup screening pre-fills three of the nine criteria as yes:
+    evaluation or scoring, systematic monitoring, and vulnerable subjects (employees). WP248 says
+    two criteria usually mean a DPIA, and its own example (an employer systematically monitoring
+    staff) matches. DPC list item 4 (systematically observing behaviour) may also apply. The
+    drafter expects a DPIA to be required. The DPO decides.
+  - >-
+    dpia-triggers-and-answers: dpia_triggers states which screening criteria are legal triggers
+    and cites them; it does not say whether the programme's processing meets a criterion. The
+    screening page shows each citation beside its criterion and keeps the programme's own
+    answers.
+
+  # Retention.
+  - >-
+    retention-unset: no statutory period was found for instructor training, observation, coaching
+    or clearance records. Storage limitation applies: keep data in identifiable form no longer
+    than the purpose needs (GDPR Art. 5(1)(e); Art. 13(2)(a)). Each period needs a written
+    reason. Legal and the head of training must set periods per category and purpose with
+    reasons, considering limitation periods for claims an instructor could bring (contract,
+    employment equality, workplace complaints), which this draft did not research.
+  - >-
+    retention-pseudonymous-events: pseudonymous events are still personal data (GDPR Recital 26).
+    Erasing the identity row ends linkability; legal to confirm this meets erasure duties for the
+    event log (decision 0006).
+
+  # Transfers.
+  - >-
+    transfers-store: the private store is a SharePoint library in the Microsoft 365 tenant (decision
+    0006). Where Microsoft stores and processes that tenant's data is not recorded here.
+  - >-
+    transfers-unknown: any person outside the EEA who reads instructor records (a coach, clearer
+    or coordinator in California, say) receives a transfer. Whether any reader sits outside the
+    EEA is not recorded. If US-based staff read records, a transfer mechanism is needed. The
+    drafter understands the EU-US Data Privacy Framework adequacy decision may cover certified
+    recipients, but did not verify this from a source; intra-group transfers usually rely on
+    standard contractual clauses. Legal to confirm.
+
+  # Rights and incidents.
+  - >-
+    rights-deadline: act without undue delay and within one month of receipt (Art. 12(3)).
+    Extendable by two further months for complex or numerous requests; tell the instructor of
+    the extension and the reasons within the first month. Deadline_days is 30 as an
+    approximation of one month; legal to confirm the representation.
+  - >-
+    rights-free-of-charge: free of charge. A reasonable fee or refusal is allowed only for
+    manifestly unfounded or excessive requests (Art. 12(5)).
+  - >-
+    rights-restrictions: Irish law allows rights to be restricted only on the grounds listed in
+    DPA 2018 s.60(3), where necessary and proportionate. They include legal claims, s.60(3)(a)(iv).
+    The section 60 text was seen only in its table of contents and a search summary.
+  - >-
+    breach-more: a late notice to the DPC must give the reasons for the delay (Art. 33(1)). A
+    processor notifies the controller without undue delay (Art. 33(2)). Every breach, its effects
+    and the remedial action is documented, whether notified or not (Art. 33(5)).
+  - >-
+    employment-law: Member States may set more specific rules for employee data by law or
+    collective agreement (Art. 88). This draft found no Irish Art. 88 provision in the DPA 2018
+    table of contents. Collective agreements could also set rules. Legal to confirm none applies.
+
+  # Programme facts.
+  - >-
+    incidental-special-category: the programme does not intend special-category data (so no Art. 9
+    condition is listed). Free-text evidence notes and coaching notes could still mention health
+    or similar matters (for example a session affected by illness). Legal to advise on guidance
+    for observers and on Art. 9 if it happens.
+  - >-
+    automated-decisions: named people sign every clearance and level change. The staffing check
+    blocks assigning an uncleared instructor; the block applies a human clearance decision and the
+    head of training can override it. Legal to confirm this is not a solely automated decision
+    under Art. 22.
+  - >-
+    recordings: observation from recordings involves the instructor's image and voice. This is
+    not biometric data unless processed to identify someone uniquely. No emotion inference is
+    allowed (spec v0.2, AI assistance). Learners in recordings are out of scope here (design
+    section 9).

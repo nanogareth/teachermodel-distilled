@@ -1,0 +1,29 @@
+schema_version: 1
+id: tm:framework/instructor
+# v1.1.0 (decision 0023): the 0.2.0 draft approved by the head of training as fit for purpose, 2026-10-27, on a
+# previously delivered SME programme. Content unchanged from 0.2.0.
+version: "1.1.0"
+status: active
+effective: 2026-10-27
+levels: [shadow, co-deliver, lead-observed, cleared, clearer]
+domains:
+  - id: technical-depth
+    name: Technical depth
+    covers: Accuracy on the module's tools and concepts; honest at the edge of own knowledge
+    basis: v0.1
+  - id: prior-knowledge
+    name: Prior-knowledge diagnosis and adaptation
+    covers: Finding out, per topic, what the room already knows, and adjusting support
+    basis: "v0.2, strong evidence: expertise reversal (Kalyuga et al. 2003; 2025 meta-analysis)"
+  - id: conceptual-questioning
+    name: Conceptual questioning
+    covers: Diagnostic multiple-choice questions, vote, peer discussion, revote, instructor-led debrief
+    basis: "v0.2, strong evidence: peer instruction in CS (Porter, Bailey Lee & Simon 2013)"
+  - id: lab-facilitation
+    name: Live-lab facilitation and troubleshooting
+    covers: Running hands-on labs and recovering from environment and model failures
+    basis: v0.1
+  - id: remote-inclusive
+    name: Remote and inclusive delivery
+    covers: Pacing, accessibility and parity between in-room and remote learners
+    basis: v0.1

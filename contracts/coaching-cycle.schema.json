@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/coaching-cycle@1",
+  "title": "Coaching cycle event payload (W7)",
+  "description": "A phase of one coaching cycle (opened, feedback, practice, closed), written when the phase completes. change, written at close, is the movement in each focus domain between the cycle's first and last observation. References, scores and dates only: feedback and practice-task text stay in the private store (protocol: standards/coaching-protocol.md).",
+  "type": "object",
+  "required": ["cycle", "instructor", "coach", "number", "intensity", "focus", "phase"],
+  "additionalProperties": false,
+  "properties": {
+    "cycle": {"type": "string", "pattern": "^tm:cycle/[a-z0-9][a-z0-9-]*--[1-9][0-9]*$"},
+    "instructor": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+    "coach": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+    "number": {"type": "integer", "minimum": 1},
+    "intensity": {"enum": ["standard", "triggered"]},
+    "focus": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"}},
+    "phase": {"enum": ["opened", "feedback", "practice", "closed"]},
+    "change": {
+      "type": "object",
+      "propertyNames": {"pattern": "^[a-z][a-z0-9-]*$"},
+      "additionalProperties": {"type": "number"},
+      "description": "Domain id to the change in score points (later minus earlier); averages of several observers may be fractional"
+    },
+    "signoff_id": {"type": "string", "pattern": "^[0-9a-f]{16,}$", "description": "The sign-off of the human step that completed the phase, when there is one"}
+  }
+}

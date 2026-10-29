@@ -1,0 +1,12 @@
+# Standards and events are hashed into receipts, so bytes must not vary by machine.
+*.md    text eol=lf
+*.py    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.json  text eol=lf
+*.jsonl text eol=lf
+*.toml  text eol=lf
+*.pdf   binary
+*.png   binary
+tests/snapshots/*.html text eol=lf
+src/teachermodel/page_templates/*.html text eol=lf

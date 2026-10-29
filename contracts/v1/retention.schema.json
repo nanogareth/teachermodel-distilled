@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/retention@1",
+  "title": "Retention periods (standards/retention.yaml)",
+  "description": "Periods are set with legal advice (spec, Privacy: Retention). null means not yet set; the privacy notice refuses to render while any period is null.",
+  "type": "object",
+  "required": ["schema_version", "status", "basis", "units", "periods"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "status": {"enum": ["draft", "approved"]},
+    "basis": {"type": "string", "minLength": 1},
+    "units": {"const": "months"},
+    "periods": {
+      "type": "object",
+      "required": ["observations", "recording_references", "outcome_summaries", "event_log", "identities_after_engagement_end"],
+      "additionalProperties": false,
+      "properties": {
+        "observations": {"$ref": "#/$defs/period"},
+        "recording_references": {"$ref": "#/$defs/period"},
+        "outcome_summaries": {"$ref": "#/$defs/period"},
+        "event_log": {"$ref": "#/$defs/period"},
+        "identities_after_engagement_end": {"$ref": "#/$defs/period"}
+      }
+    }
+  },
+  "$defs": {
+    "period": {"type": ["integer", "null"], "minimum": 0}
+  }
+}

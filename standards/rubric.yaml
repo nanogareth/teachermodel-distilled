@@ -1,0 +1,36 @@
+schema_version: 1
+id: tm:rubric/instructor
+framework_version: "1.1.0"
+status: draft
+scale:
+  1: not yet
+  2: developing
+  3: proficient
+  4: exemplary
+# Behavioural anchors per domain and point. Draft wording; refine through calibration (W5).
+anchors:
+  technical-depth:
+    1: Content errors go uncorrected, or questions are deflected without follow-up.
+    2: Accurate on prepared material; unsure answers are not followed up.
+    3: Answers correctly or states what they would test to find out; no errors left uncorrected.
+    4: Shows the reasoning behind a design choice and tests an uncertain answer live.
+  prior-knowledge:
+    1: No check of what the room knows; one pace for everyone.
+    2: Runs the pre-check but does not act on it.
+    3: Runs the pre-check, names what it showed, and skips or adds worked examples accordingly.
+    4: Re-checks mid-session per topic and routes learners to different tasks by result.
+  conceptual-questioning:
+    1: Questions are recall-only or rhetorical.
+    2: Asks conceptual questions but answers them without discussion.
+    3: Uses at least one question whose wrong answers map to known misconceptions, and changes course on the result.
+    4: Runs vote, peer discussion and revote, then a debrief that addresses each wrong answer.
+  lab-facilitation:
+    1: Lab stalls on an environment or model failure.
+    2: Recovers individual learners but the cohort loses pace.
+    3: Diagnoses a failing environment or non-deterministic output in front of the room and keeps the cohort moving.
+    4: Turns a live failure into a teaching moment on verification.
+  remote-inclusive:
+    1: Remote learners are not addressed.
+    2: Remote learners are addressed at the end of activities only.
+    3: Remote learners get the same questions, checks and help queue as the room.
+    4: Pacing and checks are planned per mode and adjusted from participation data.

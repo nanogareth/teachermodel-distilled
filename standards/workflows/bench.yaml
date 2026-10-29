@@ -1,0 +1,73 @@
+# W10 Bench decision workflow (tm:contract/workflows@1). Increment 3 plan, section I; spec v0.2 W10 and Rules (bench evidence:
+# no bench decision without current observations from at least 2 observers and an evidence pack); decisions 0005 (the pack
+# and the decision are training-function records, never exported to a performance review), 0013 and 0014 (the bench subject).
+# Event kinds in done_when: step (the auto steps) and signoff (the decision). The workflow also writes `subject` events (a
+# bench is a child subject, opened by open-bench or by the command request-bench), `check` events (bench-ready blocked; a
+# candidate closed by an exit), `bench_decision` (the hook of the decision) and `level_change` (return to co-teaching),
+# declared too.
+#
+# open-bench      auto, on the programme; refreshed on every run. Opens one bench subject per occasion for a registered
+#                 instructor with no undecided review who has not exited: the engagement ends within 30 days (registration
+#                 engagement.end), or quality-review trigger checks on two distinct deliveries came after the latest cycle
+#                 (which must be triggered) and the latest review opened, with teaching evidence: one of them is
+#                 domain-one-confirmed, or a triggered cycle closed since the latest review without a gain in its focus
+#                 (decision 0015, finding 1). The command `teachermodel request-bench [--concern teaching-quality|other]` (head
+#                 of training) opens one with reason requested.
+# evidence-pack   auto, per bench; refreshed while the review is undecided. Writes generated/bench/<slug>.html (clearances,
+#                 observations of the bench window with their domain scores, outcome summaries above the minimum learner
+#                 count, coaching history, CPD, audits of those observations; notes by key only) and a `step` event with its
+#                 sha256. A record whose adapter is not written yet shows as "not available".
+# bench-ready     auto, per bench: rules.bench_ready (an evidence pack and observations from 2 distinct observers in the
+#                 window). Blocked checks name the shortfall; the step stays open until the evidence is enough.
+# bench-decision  the head of training (a person who is not the instructor), `bind: input`: the inputs carry the
+#                 hash of the pack, so a changed pack reopens it. renew, convert, return-to-co-teaching or exit, with a written
+#                 rationale (kept in the private store, never in the log). return-to-co-teaching is the default for a
+#                 teaching-quality reason. The hook writes the bench_decision event; return-to-co-teaching lowers the level to
+#                 co-deliver (a level_change), exit changes no level (the spec has no 'exited' level) and closes the
+#                 instructor's candidates by a check each.
+#
+# due {days} is an operational default (decision 0002), not an evidence-based threshold.
+schema_version: 1
+id: tm:standards/workflows-bench
+status: draft
+workflows:
+  - id: tm:workflow/bench
+    name: W10 Bench decision
+    basis: "instructor-development-spec-v0.2 W10 Bench decision and Rules (bench evidence); increment-3 plan section I; decisions 0005 and 0014"
+    event_kinds: [step, signoff, subject, check, level_change, bench_decision]
+    steps:
+      - id: tm:step/open-bench
+        name: Bench reviews opened for contract end or repeated quality triggers
+        type: auto
+        role: head-of-training
+        subject: programme
+        needs: [tm:step/roster-import]
+        done_when: {kind: step, match: {step: tm:step/open-bench}}
+        due: {days: 7, basis: operational default}
+        basis: "instructor-development-spec-v0.2 W10 (at contract end or on a trigger); increment-3 plan section I; decision 0014 (bench subject)"
+      - id: tm:step/evidence-pack
+        name: Evidence pack assembled for the bench review
+        type: auto
+        role: head-of-training
+        subject: bench
+        needs: []
+        done_when: {kind: step, match: {step: tm:step/evidence-pack}}
+        basis: "instructor-development-spec-v0.2 W10 (the system assembles the evidence pack) and Rules (bench evidence); decision 0005"
+      - id: tm:step/bench-ready
+        name: Evidence meets the bench minimum
+        type: auto
+        role: head-of-training
+        subject: bench
+        needs: [tm:step/evidence-pack]
+        done_when: {kind: step, match: {step: tm:step/bench-ready}}
+        basis: "instructor-development-spec-v0.2 Rules (bench evidence: current observations from at least 2 observers and an evidence pack); rules.bench_ready"
+      - id: tm:step/bench-decision
+        name: Bench decision by the head of training
+        type: human
+        role: head-of-training
+        subject: bench
+        needs: [tm:step/bench-ready]
+        done_when: {kind: signoff, match: {step: tm:step/bench-decision}, bind: input}
+        due: {days: 14, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W10 (the head of training decides and records the rationale; return to co-teaching is the default for a teaching-quality concern)"

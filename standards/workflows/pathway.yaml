@@ -1,0 +1,30 @@
+# Pathway workflow (tm:contract/workflows@1). Increment 2 plan, "Machine contracts" (candidate subjects); decision 0011.
+# Event kinds in done_when: step (declared in event_kinds below). The auto step also writes `subject` events, so
+# `subject` is declared too.
+# `open-candidates` is an auto step on the programme subject. It is done once it has run, and then runs again, like the
+# ROPA refresh, whenever its needs are still met: it opens one `candidate` subject for each unit x mode an instructor
+# delivers (registration `delivers`), for every instructor whose latest level is lead-observed or higher, and never
+# reopens a candidate that exists. The level test is the runner's, not a need: the engine cannot ask a programme step
+# about every instructor (an instructor can also start at lead-observed and never take the lead-observed-level step).
+# W12 (increment 3): it also opens a candidate for each SME author (standards/units `authors`) of a unit version, for each
+# delivery mode of the unit the author holds no valid clearance for, whatever the author's level. The author must be a
+# registered instructor. A new unit version is a new file, so it brings its authors' candidates the next time the step runs.
+# due {days} values are operational defaults (decision 0002), not evidence-based thresholds.
+schema_version: 1
+id: tm:standards/workflows-pathway
+status: draft
+workflows:
+  - id: tm:workflow/pathway
+    name: Pathway (candidates for clearance)
+    basis: "increment-2 plan, Machine contracts (child subjects); decision 0011; instructor-development-spec-v0.2 W2-W4 (a clearance is for an instructor, unit and mode)"
+    event_kinds: [step, subject]
+    steps:
+      - id: tm:step/open-candidates
+        name: Candidates opened for instructors at lead-observed or higher
+        type: auto
+        role: head-of-training
+        subject: programme
+        needs: [tm:step/roster-import]
+        done_when: {kind: step, match: {step: tm:step/open-candidates}}
+        due: {days: 7, basis: operational default}
+        basis: "increment-2 plan K0 (one candidate per registration delivers unit x mode for instructors at lead-observed or above); decision 0011"

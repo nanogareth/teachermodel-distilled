@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/staffing-check@2",
+  "title": "Staffing check: request from delivery scheduling, response from teachermodel",
+  "$defs": {
+    "request": {
+      "type": "object",
+      "required": ["instructor", "unit", "mode", "date"],
+      "additionalProperties": false,
+      "properties": {
+        "instructor": {"type": "string", "pattern": "^tm:instructor/"},
+        "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+        "mode": {"enum": ["in-person", "remote", "hybrid"]},
+        "date": {"type": "string", "format": "date"},
+        "partner": {"type": "string", "pattern": "^tm:org/[a-z0-9][a-z0-9-]*$", "description": "Optional, additive within major 2 (increment 3, W11). The partner organisation the delivery is for. A clearance scoped to a partner covers only a request that names it."},
+        "region": {"type": "string", "pattern": "^[A-Z]{2}(-[A-Z0-9]{1,3})?$", "description": "Optional, additive within major 2 (increment 3, W11). The region the delivery is in (ISO 3166-1 alpha-2, optionally with an ISO 3166-2 subdivision: IE, US-CA). A clearance scoped to regions covers only a request that names one of them."}
+      }
+    },
+    "response": {
+      "type": "object",
+      "required": ["verdict", "reasons"],
+      "additionalProperties": false,
+      "properties": {
+        "verdict": {"enum": ["ok", "warn", "block"]},
+        "reasons": {"type": "array", "items": {"type": "string"}, "description": "Why a verdict is warn or block. What delivery scheduling receives is drawn from a fixed vocabulary (decision 0005: scheduling sees clearance status only): \"not cleared\" for a block; \"clearance expiring\" and/or \"recheck due\" for a warn; and, for an ok that rests on a staffing override (the head of training overriding a block, for exactly the instructor, unit, mode and date of the request), \"override tm:override/<id>\". The detailed reasons (the bench decision, a retired framework, a scope, day counts, and what an override overrode as \"overridden: <reason>\") are produced only for the training function (teachermodel staffing-check --detail)."},
+        "clearance": {"type": "string", "pattern": "^tm:clearance/"}
+      }
+    }
+  }
+}

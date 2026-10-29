@@ -1,0 +1,19 @@
+# Attestations: what a role states for a gate criterion that no store can show (decision 0023). `teachermodel gates`
+# reads them. A role and a decision record, never a name (decision 0003). Append a new entry rather than editing one.
+schema_version: 1
+id: tm:standards/attestations
+attestations:
+  - criterion: G6-sme-module-delivered
+    role: head-of-training
+    date: "2026-10-27"
+    decision: "0023"
+    statement: >-
+      A previously delivered SME programme, taken through to delivery, is the real-world evidence for phase 6; on it the
+      framework is fit for purpose.
+  - criterion: G6-standard-v1.1
+    role: head-of-training
+    date: "2026-10-27"
+    decision: "0023"
+    statement: >-
+      The framework document was reviewed and is approved for promotion from the 0.2.0 draft to v1.1.0, content
+      unchanged.

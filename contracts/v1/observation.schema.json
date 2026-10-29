@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/observation@1",
+  "title": "Observation event payload",
+  "type": "object",
+  "required": ["instructor", "module", "observer", "length", "lead", "rubric_version", "scores"],
+  "additionalProperties": false,
+  "properties": {
+    "instructor": {"type": "string", "pattern": "^tm:instructor/"},
+    "module": {"type": "string", "pattern": "^(tm|sl):module/"},
+    "observer": {"type": "string", "pattern": "^tm:instructor/"},
+    "length": {"enum": ["full", "short"]},
+    "lead": {"type": "boolean"},
+    "mode": {"enum": ["in-person", "remote", "hybrid"]},
+    "rubric_version": {"type": "string"},
+    "scores": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {"type": "integer", "minimum": 1, "maximum": 4}
+    },
+    "evidence_ref": {"type": "string", "description": "Key into the private store; notes never enter the event log"}
+  }
+}

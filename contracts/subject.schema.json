@@ -1,0 +1,535 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/subject@2",
+  "title": "Subject event payload: opens a child subject (candidate, assignment, exercise, cycle, sample, bench, override)",
+  "description": "Carried by an event of kind `subject` (event@3 onward, decisions 0011 and 0014). The event's subject_uri is the new subject; the workflow engine lists it as {kind: subject_kind, **attrs}. Attrs hold references only. check_event also requires the URI to fit the kind: a candidate's is derived from its attrs (workflow.candidate_uri), an assignment's, an exercise's and an override's end in 16 hex characters, a cycle's is tm:cycle/<instructor slug>--<attrs.number>, a sample's is tm:sample/<attrs.quarter>--<attrs.observation>, and a bench's is tm:bench/<instructor slug>--<n>. subject@2 (decision 0014) adds cycle, sample, bench and override to the kinds of subject@1 (kept in contracts/v1/subject.schema.json). The appeal kind was added within subject@2 by decision 0021; an appeal's URI ends in 16 hex characters. The recalibration kind was added within subject@2 by decision 0024; its URI ends in 16 hex characters.",
+  "type": "object",
+  "required": [
+    "subject_kind",
+    "attrs",
+    "opened_by"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "subject_kind": {
+      "enum": [
+        "candidate",
+        "assignment",
+        "exercise",
+        "cycle",
+        "sample",
+        "bench",
+        "override",
+        "appeal",
+        "recalibration"
+      ]
+    },
+    "attrs": {
+      "type": "object"
+    },
+    "opened_by": {
+      "type": "string",
+      "pattern": "^tm:(step|cli)/[a-z0-9][a-z0-9-]*$",
+      "description": "The step that opened the subject; a subject opened by a command (open-exercise) names it as tm:cli/<command>"
+    }
+  },
+  "$defs": {
+    "mode": {
+      "enum": [
+        "in-person",
+        "remote",
+        "hybrid"
+      ]
+    },
+    "instructor": {
+      "type": "string",
+      "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"
+    },
+    "domain": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "unit": {
+      "type": "string",
+      "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"
+    },
+    "candidate": {
+      "type": "object",
+      "required": [
+        "instructor",
+        "unit",
+        "mode"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "instructor": {
+          "$ref": "#/$defs/instructor"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        }
+      }
+    },
+    "assignment": {
+      "type": "object",
+      "required": [
+        "candidate",
+        "instructor",
+        "unit",
+        "mode",
+        "observer",
+        "length",
+        "lead",
+        "delivery_ref"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "candidate": {
+          "type": "string",
+          "pattern": "^tm:candidate/[a-z0-9][a-z0-9-]*$"
+        },
+        "instructor": {
+          "$ref": "#/$defs/instructor"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "observer": {
+          "$ref": "#/$defs/instructor"
+        },
+        "length": {
+          "enum": [
+            "full",
+            "short"
+          ]
+        },
+        "lead": {
+          "type": "boolean"
+        },
+        "delivery_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The delivery id or session reference, not a person's name"
+        },
+        "recording_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key into the private store"
+        },
+        "held_on": {
+          "$ref": "#/$defs/date",
+          "description": "Optional, additive within subject@2 (decision 0022): the day a session already held on paper took place, for an ad-hoc assignment entered after the system was down. The observation may carry this date."
+        }
+      }
+    },
+    "exercise": {
+      "type": "object",
+      "required": [
+        "unit",
+        "rubric_version",
+        "recording_ref",
+        "observers",
+        "reference_key"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "unit": {
+          "$ref": "#/$defs/unit"
+        },
+        "rubric_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "recording_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key into the private store"
+        },
+        "observers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/instructor"
+          }
+        },
+        "reference_key": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key of the reference scores in the private store; the scores never enter events"
+        }
+      }
+    },
+    "cycle": {
+      "type": "object",
+      "required": [
+        "instructor",
+        "coach",
+        "number",
+        "intensity",
+        "focus"
+      ],
+      "additionalProperties": false,
+      "description": "One coaching cycle of one instructor (W7), opened by the auto step open-cycles",
+      "properties": {
+        "instructor": {
+          "$ref": "#/$defs/instructor"
+        },
+        "coach": {
+          "$ref": "#/$defs/instructor"
+        },
+        "number": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "intensity": {
+          "enum": [
+            "standard",
+            "triggered"
+          ]
+        },
+        "focus": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/domain"
+          }
+        },
+        "trigger": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The quality trigger id that made the cycle triggered"
+        }
+      }
+    },
+    "sample": {
+      "type": "object",
+      "required": [
+        "observation",
+        "instructor",
+        "observer",
+        "quarter",
+        "second_observer"
+      ],
+      "additionalProperties": false,
+      "description": "One observation drawn for a second scoring (W6), opened by the auto step draw-sample",
+      "properties": {
+        "observation": {
+          "type": "string",
+          "minLength": 8,
+          "description": "Id of the observation event drawn"
+        },
+        "instructor": {
+          "$ref": "#/$defs/instructor"
+        },
+        "observer": {
+          "$ref": "#/$defs/instructor"
+        },
+        "quarter": {
+          "type": "string",
+          "pattern": "^\\d{4}-?Q[1-4]$"
+        },
+        "second_observer": {
+          "$ref": "#/$defs/instructor"
+        }
+      }
+    },
+    "bench": {
+      "type": "object",
+      "required": [
+        "instructor",
+        "reason"
+      ],
+      "additionalProperties": false,
+      "description": "One bench review of one instructor (W10), opened by open-bench or by the request-bench command",
+      "properties": {
+        "instructor": {
+          "$ref": "#/$defs/instructor"
+        },
+        "reason": {
+          "enum": [
+            "contract-end",
+            "repeated-trigger",
+            "requested"
+          ]
+        },
+        "concern": {
+          "enum": [
+            "teaching-quality",
+            "other"
+          ],
+          "description": "Optional, additive within @2 (integration review finding 19): what a requested review is about; teaching-quality makes return to co-teaching the decision page's default (spec W10)"
+        }
+      }
+    },
+    "override": {
+      "type": "object",
+      "required": [
+        "instructor",
+        "unit",
+        "mode",
+        "date",
+        "request_ref"
+      ],
+      "additionalProperties": false,
+      "description": "One staffing override request (spec Rules), opened by the request-override command; the reason stays in the private store. partner and region are optional, additive within major 2 (decision 0018): they name the occasion as the staffing check's request does, and an override covers only a request that names the same partner and region (or, like the override, none).",
+      "properties": {
+        "instructor": {
+          "$ref": "#/$defs/instructor"
+        },
+        "unit": {
+          "$ref": "#/$defs/unit"
+        },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "date": {
+          "$ref": "#/$defs/date"
+        },
+        "request_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key into the private store"
+        },
+        "partner": {
+          "type": "string",
+          "pattern": "^tm:org/[a-z0-9][a-z0-9-]*$",
+          "description": "Optional. The partner organisation the delivery is for, as in staffing-check@2."
+        },
+        "region": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}(-[A-Z0-9]{1,3})?$",
+          "description": "Optional. The region the delivery is in, as in staffing-check@2."
+        }
+      }
+    },
+    "recalibration": {
+      "type": "object",
+      "required": [
+        "instructor",
+        "exercises"
+      ],
+      "additionalProperties": false,
+      "description": "A clearer, current or lapsed, whose observer calibration has lapsed or lapses soon (decision 0024), opened by open-recalibrations; the head of training opens an exercise for them from its page",
+      "properties": {
+        "instructor": {
+          "$ref": "#/$defs/instructor"
+        },
+        "exercises": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many exercises listed the instructor when it opened; one listing them later closes it"
+        }
+      }
+    },
+    "appeal": {
+      "type": "object",
+      "required": [
+        "instructor",
+        "decision",
+        "request_ref"
+      ],
+      "additionalProperties": false,
+      "description": "An instructor's appeal of one decision on their record (decision 0021), opened by their reply-or-appeal sign-off; their words stay in the private store",
+      "properties": {
+        "instructor": {
+          "$ref": "#/$defs/instructor"
+        },
+        "decision": {
+          "type": "string",
+          "minLength": 8,
+          "description": "Id of the event that recorded the decision"
+        },
+        "request_ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Key into the private store"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "subject_kind": {
+            "const": "candidate"
+          }
+        },
+        "required": [
+          "subject_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attrs": {
+            "$ref": "#/$defs/candidate"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "subject_kind": {
+            "const": "assignment"
+          }
+        },
+        "required": [
+          "subject_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attrs": {
+            "$ref": "#/$defs/assignment"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "subject_kind": {
+            "const": "exercise"
+          }
+        },
+        "required": [
+          "subject_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attrs": {
+            "$ref": "#/$defs/exercise"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "subject_kind": {
+            "const": "cycle"
+          }
+        },
+        "required": [
+          "subject_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attrs": {
+            "$ref": "#/$defs/cycle"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "subject_kind": {
+            "const": "sample"
+          }
+        },
+        "required": [
+          "subject_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attrs": {
+            "$ref": "#/$defs/sample"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "subject_kind": {
+            "const": "bench"
+          }
+        },
+        "required": [
+          "subject_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attrs": {
+            "$ref": "#/$defs/bench"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "subject_kind": {
+            "const": "override"
+          }
+        },
+        "required": [
+          "subject_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attrs": {
+            "$ref": "#/$defs/override"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "subject_kind": {
+            "const": "appeal"
+          }
+        },
+        "required": [
+          "subject_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attrs": {
+            "$ref": "#/$defs/appeal"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "subject_kind": {
+            "const": "recalibration"
+          }
+        },
+        "required": [
+          "subject_kind"
+        ]
+      },
+      "then": {
+        "properties": {
+          "attrs": {
+            "$ref": "#/$defs/recalibration"
+          }
+        }
+      }
+    }
+  ]
+}

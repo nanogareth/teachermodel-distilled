@@ -1,0 +1,70 @@
+# W5 Calibration workflow (tm:contract/workflows@1). Increment 2 plan, section E; spec v0.2 W5 and Rules (calibration pass,
+# clearer renewal).
+# An exercise is a child subject opened by the head of training with `teachermodel open-exercise` (event@3 `subject`,
+# opened_by tm:cli/open-exercise): a recording, the two or more observers who score it (W5 step 1), and a reference score per
+# framework domain that stays in the private store. The result is computed against the reference (pass or fail) and, for the
+# record only, between the observers (the calibration event's optional inter_observer, W5 step 2). The result `step` event
+# carries the renewal_months it was computed under, which the clearer_renewal due rule reads. Event kinds in done_when: step
+# (declared below).
+#
+# The engine models one step per subject, and an exercise has several observers who each score it. So `calibration-score`
+# stays open while every listed observer signs, and is done only when the auto step `calibration-result` writes its `step`
+# event, which it does once every listed observer has an accepted approving sign-off. Both steps are therefore done by the
+# same event, and `calibration-result` needs nothing: its runner waits (appends nothing) until all observers have submitted.
+# The signer of a scoring page is the observer it is written for, never the exercise: `signer: attrs.observers` (decision
+# 0012) lets ingest accept any listed observer who has not signed yet.
+# `calibration-score` is due by the renewal date of its observers' earlier passes (rule `clearer_renewal`); an exercise for
+# observers who have never passed has no date.
+#
+# Recalibration (decision 0024). `open-recalibrations` (auto, programme, refreshed) opens a `recalibration` subject for each
+# clearer, current or moved back to cleared by a lapse, who is not calibrated 30 days ahead (an audit referral, a renewal
+# coming due, or never passed), has no exercise awaiting its result and no blocking bench decision. The head of
+# training gets `recalibration-exercise`: choose a pre-scored recording already on record and a second observer, approve, and
+# the hook opens the exercise. Once any exercise lists the instructor (this page or `open-exercise`), or the need has gone, the
+# step writes a system `check` {result: closed} on the recalibration. Event kinds: subject, check, signoff (declared below).
+schema_version: 1
+id: tm:standards/workflows-calibration
+status: draft
+workflows:
+  - id: tm:workflow/calibration
+    name: W5 Calibration
+    basis: "instructor-development-spec-v0.2 W5 Calibration; Rules (calibration pass, clearer renewal); increment-2 plan section E; decision 0011"
+    event_kinds: [step, subject, check, signoff]
+    steps:
+      - id: tm:step/calibration-score
+        name: Calibration exercise scored by an observer
+        type: human
+        role: instructor
+        subject: exercise
+        needs: []
+        signer: attrs.observers
+        done_when: {kind: step, match: {step: tm:step/calibration-result}}
+        due: clearer_renewal
+        page: approve
+        basis: "instructor-development-spec-v0.2 W5 (each observer scores the recorded delivery against the rubric, blind to the reference)"
+      - id: tm:step/calibration-result
+        name: Calibration result computed against the reference
+        type: auto
+        role: head-of-training
+        subject: exercise
+        needs: []
+        done_when: {kind: step, match: {step: tm:step/calibration-result}}
+        basis: "instructor-development-spec-v0.2 Rules (calibration pass: within-one and exact agreement shares); rules.calibration_pass"
+      - id: tm:step/open-recalibrations
+        name: Recalibrations opened for clearers whose calibration lapses
+        type: auto
+        role: head-of-training
+        subject: programme
+        needs: [tm:step/roster-import]
+        done_when: {kind: step, match: {step: tm:step/open-recalibrations}}
+        basis: "instructor-development-spec-v0.2 Rules (clearer renewal) and W6 (an audit referral sends the observer back to calibration); decision 0024"
+      - id: tm:step/recalibration-exercise
+        name: Recalibration exercise opened by the head of training
+        type: human
+        role: head-of-training
+        subject: recalibration
+        needs: []
+        done_when: {kind: signoff, match: {step: tm:step/recalibration-exercise}}
+        due: {days: 14, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W5 (the head of training opens a calibration exercise on a pre-scored recording); decision 0024"

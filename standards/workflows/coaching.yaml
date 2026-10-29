@@ -1,0 +1,92 @@
+# W7 Coaching workflow (tm:contract/workflows@1). Increment 3 plan section G; spec v0.2 W7 and Rules (coaching cadence);
+# standards/coaching-protocol.md; decision 0014 (cycle subjects, coaching-cycle@1, quality triggers, coaches_of).
+# Event kinds in done_when: step (the auto steps) and signoff (the human steps). The workflow also writes `subject` events (a
+# cycle, on opening), `coaching_cycle` events (one per phase: opened, feedback, practice, closed), `observation` events (the
+# coach's two observations, written by the sign-off hooks) and `check` events (an instructor who cannot be given a cycle).
+#
+# open-cycles (auto, programme, refreshed on every run) keeps every instructor at lead-observed or above (latest level) in a
+# cycle: cycle n+1 opens as soon as cycle n closes (integration review finding 10), or once cycle n has run past the standard
+# period without closing (a stalled cycle stays in the queue as overdue). The cycle's period is 91 days (rules.coaching
+# standard_cycle_days) or 30 when it is triggered (triggered_cycle_days), from the day it opened, and the human steps' due rules
+# (cycle_observe_due, cycle_practice_due, cycle_reobserve_due, cycle_end_due) place the steps inside it. Intensity is triggered
+# when H's trigger `check` events exist that no cycle has used yet; a trigger arriving while a standard cycle is open switches it
+# (a coaching_cycle event of its current phase with the new intensity and focus). The focus is the trigger domain, else the two
+# lowest-averaged domains of the last 180 days of observations; the coach is the first of
+# coaches_of(instructor) by hash rank. No coach (or no unit to observe, or no observation to choose a focus from) is a blocked
+# check, not a cycle.
+#
+# The cycle's steps are the coach's, in the protocol's order: observe, feedback (within 5 working days of the observation:
+# due rule feedback_window), practice task, re-observe; close (auto) records the change in each focus domain and reviews the
+# instructor's CPD plan (cpd.yaml). The coach observes on the cycle itself rather than on an `assignment` subject: a workflow
+# step on `assignment` would apply to every assignment, W2's own among them (flows/coaching.py explains). Feedback and task text
+# stay in the private store. The cycle's coach is the only signer of its steps (a content check; the engine's `signer`
+# attribute names signers of assignments and candidates only).
+# due {days} values are operational defaults (decision 0002), not evidence-based thresholds; observation_window is W2's rule
+# (14 days from the day the subject was opened).
+schema_version: 1
+id: tm:standards/workflows-coaching
+status: draft
+workflows:
+  - id: tm:workflow/coaching
+    name: W7 Coaching cycle
+    basis: "instructor-development-spec-v0.2 W7 and Rules (coaching cadence); standards/coaching-protocol.md; increment-3 plan G; decision 0014"
+    event_kinds: [step, signoff, subject, observation, coaching_cycle, check]
+    steps:
+      - id: tm:step/open-cycles
+        name: Coaching cycles opened for instructors at lead-observed or higher
+        type: auto
+        role: coordinator
+        subject: programme
+        needs: [tm:step/open-candidates]
+        done_when: {kind: step, match: {step: tm:step/open-cycles}}
+        due: {days: 7, basis: operational default}
+        basis: "spec v0.2 W7 (every active instructor is in a cycle; a quality trigger switches it to triggered intensity); rules.coaching_overdue; coaching protocol cadence"
+      - id: tm:step/coach-observe
+        name: Instructor observed by their coach
+        type: human
+        role: coach
+        subject: cycle
+        needs: []
+        done_when: {kind: signoff, match: {step: tm:step/coach-observe}}
+        due: cycle_observe_due
+        page: approve
+        basis: "coaching protocol step 1 (full or 15-minute, live or from a recording, scored on the rubric)"
+      - id: tm:step/coach-feedback
+        name: Feedback given on the focus domains
+        type: human
+        role: coach
+        subject: cycle
+        needs: [tm:step/coach-observe]
+        done_when: {kind: signoff, match: {step: tm:step/coach-feedback}}
+        due: feedback_window
+        page: approve
+        basis: "coaching protocol step 2 (within 5 working days; one or two focus domains, each with an evidence note)"
+      - id: tm:step/practice-task
+        name: Practice task set for each focus domain
+        type: human
+        role: coach
+        subject: cycle
+        needs: [tm:step/coach-feedback]
+        done_when: {kind: signoff, match: {step: tm:step/practice-task}}
+        due: cycle_practice_due
+        page: approve
+        basis: "coaching protocol step 3 (one concrete practice task per focus domain, done before the next delivery)"
+      - id: tm:step/coach-reobserve
+        name: Instructor re-observed on the focus domains
+        type: human
+        role: coach
+        subject: cycle
+        needs: [tm:step/practice-task]
+        done_when: {kind: signoff, match: {step: tm:step/coach-reobserve}}
+        due: cycle_reobserve_due
+        page: approve
+        basis: "coaching protocol step 4 (the focus domains are scored again)"
+      - id: tm:step/cycle-close
+        name: Cycle closed with the change in the focus domains recorded
+        type: auto
+        role: coordinator
+        subject: cycle
+        needs: [tm:step/coach-reobserve]
+        done_when: {kind: step, match: {step: tm:step/cycle-close}}
+        due: cycle_end_due
+        basis: "coaching protocol step 4 (the cycle closes with the change recorded); spec v0.2 W9 (the next cycle's close keeps or closes each CPD gap)"

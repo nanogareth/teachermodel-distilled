@@ -1,0 +1,14 @@
+# Personal data never enters git (data class 4). The code refuses any private store inside the working
+# tree (no in-tree default), so .private/ stays ignored only as a safety net against a stray copy:
+.private/
+# Generated index and outputs
+out/
+*.db
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.claude/worktrees/

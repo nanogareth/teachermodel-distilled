@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/unit-requirements@1",
+  "title": "What teachermodel reads from a curriculum unit (a local, pinned mirror under standards/units/)",
+  "description": "One file per unit version, standards/units/<slug>@<ver>.yaml, named for its id. the curriculum system owns the unit; this is the part clearance depends on. A dry run is bound to the hash of environment, failure_catalogue and run_sheet (units.environment_sha256), so a change to any of them voids earlier dry runs. Failure ids and run-sheet step ids must be unique within the unit (checked by units.document_errors, which JSON Schema cannot express).",
+  "type": "object",
+  "required": ["schema_version", "id", "title", "status", "learning_outcomes", "delivery_modes", "environment", "failure_catalogue"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "id": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+    "title": {"type": "string", "minLength": 1},
+    "status": {"type": "string", "minLength": 1},
+    "learning_outcomes": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+    "delivery_modes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["in-person", "remote", "hybrid"]}},
+    "authors": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+      "description": "Optional, additive within major 1 (increment 3, W12). The SME authors of this unit version, as registered instructors. When a unit file gains a version, open-candidates opens a candidate (dry run and clearance, W3 and W4) for each author and delivery mode they hold no valid clearance for. Not part of the dry-run hash."
+    },
+    "environment": {"type": "string", "minLength": 1, "description": "The lab environment the unit runs in; part of the dry-run hash"},
+    "pre_check": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["topic", "question", "routes"],
+        "properties": {
+          "topic": {"type": "string", "minLength": 1},
+          "question": {"type": "string", "minLength": 1},
+          "routes": {"type": "object", "required": ["correct", "incorrect"]}
+        }
+      }
+    },
+    "misconceptions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "statement"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "statement": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "failure_catalogue": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Failures a dry run can inject; one is chosen and handled, and the fallback is exercised",
+      "items": {
+        "type": "object",
+        "required": ["id", "inject", "expected_handling"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "inject": {"type": "string", "minLength": 1},
+          "expected_handling": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "run_sheet": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Optional. The steps the facilitator walks, in order; part of the dry-run hash",
+      "items": {
+        "type": "object",
+        "required": ["id", "action"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+          "action": {"type": "string", "minLength": 1},
+          "minutes": {"type": "number", "exclusiveMinimum": 0}
+        }
+      }
+    }
+  }
+}

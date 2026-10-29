@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/signoff@1",
+  "title": "Sign-off returned from a generated page (JSON file or mail attachment)",
+  "description": "Carries references and decisions only, never names. input_sha256 binds the decision to the exact inputs the page showed, so a changed input makes the sign-off stale.",
+  "type": "object",
+  "required": ["schema", "id", "step", "subject_uri", "input_sha256", "decision", "fields", "signer", "signed_at", "page_template_sha256"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/signoff@1"},
+    "id": {"type": "string", "pattern": "^[0-9a-f]{16,}$", "description": "Unique per page render; a repeat id is a no-op"},
+    "step": {"type": "string", "pattern": "^tm:step/[a-z0-9-]+$"},
+    "subject_uri": {"type": "string", "pattern": "^(tm|sl):[a-z-]+/"},
+    "input_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "decision": {"enum": ["approve", "reject", "changes", "record", "revoke"], "description": "revoke (decision 0019, added within major 1) withdraws the approval in force of a step whose done_when declares revocable: true; it carries the same input_sha256 as that approval and a written fields.reason."},
+    "fields": {"type": "object"},
+    "signer": {"type": "string", "pattern": "^tm:(person|instructor)/[a-z0-9][a-z0-9-]*$"},
+    "signed_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "page_template_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

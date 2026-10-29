@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/rules@1",
+  "title": "Clearance rules file (standards/rules.yaml)",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "id",
+    "framework_version",
+    "status",
+    "clearance",
+    "calibration",
+    "audit",
+    "coaching",
+    "quality",
+    "bench",
+    "staffing"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "enum": [
+        "draft",
+        "active",
+        "parked",
+        "retired"
+      ]
+    },
+    "clearance": {
+      "type": "object",
+      "required": [
+        "min_observations",
+        "min_distinct_observers",
+        "max_coach_observers",
+        "min_domain_average",
+        "min_overall_mean",
+        "expiry_months"
+      ],
+      "properties": {
+        "min_distinct_observers": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "max_coach_observers": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "bench": {
+      "type": "object",
+      "required": [
+        "min_distinct_observers"
+      ],
+      "properties": {
+        "min_distinct_observers": {
+          "type": "integer",
+          "minimum": 2
+        }
+      }
+    },
+    "framework_compatible_majors": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[0-9]+$"
+      },
+      "uniqueItems": true,
+      "description": "Optional (decision 0023). Earlier framework majors whose clearances and observations stay in force under the current major: a promotion that changes the version but not the content. Without it, a new major expires them (spec v0.2, Clearance expiry)."
+    }
+  }
+}

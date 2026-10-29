@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/receipt@1",
+  "title": "Receipt returned by the M365 driver bridge",
+  "description": "Hub candidate. The driver's result for each op of a plan. plan_sha256 binds the receipt to the exact ops it answered; a receipt for a different plan is rejected whole. Only status ok is evidence; not_found and error never satisfy a step. Driver error text is never stored. run_at must fall between the plan's created stamp and ingest time. Per-op data shapes: site.library {exists: bool}; mail.sent {messages: [{sender, to: [address, ...], subject, sentDateTime}]}, counted only when sent by the owner to args.to with args.tag in the subject between args.since and ingest time; mail.tagged {messages: [{sender, subject, received, attachments: [{name, content | content_base64}]}]}, where sender is the SMTP address from the message body (a value that is not an SMTP address is rejected), content is UTF-8 text and content_base64 is strict base64 of UTF-8 text, and only messages whose subject contains [tm-signoff are read; run_at must carry a UTC offset (a naive time is refused); file.get is rejected until the Graph driver supplies createdBy.",
+  "type": "object",
+  "required": ["schema", "plan_sha256", "driver", "run_at", "results"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/receipt@1"},
+    "plan_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "driver": {"enum": ["connector", "graph", "fixture", "pilot"], "description": "pilot: additive within major 1 (decision 0016); written only by teachermodel pilot-sign for generated signers in a pilot store, and never accepted by teachermodel ingest"},
+    "run_at": {"type": "string", "minLength": 10},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["op_id", "status", "data"],
+        "additionalProperties": false,
+        "properties": {
+          "op_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+          "status": {"enum": ["ok", "not_found", "error"]},
+          "data": {"type": "object"},
+          "error": {"type": "string"}
+        }
+      }
+    }
+  }
+}

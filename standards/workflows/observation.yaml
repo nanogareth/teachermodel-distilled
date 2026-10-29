@@ -1,0 +1,107 @@
+# W2 Observation workflow (tm:contract/workflows@1). Increment 2 plan section B; spec v0.2 W2 and Rules; decision 0011.
+# Event kinds in done_when: step (the auto steps) and signoff (the human steps). The workflow also writes `subject` events
+# (the assignments, on approval), `observation` events (on release) and `check` events (a proposal or a release that is
+# blocked), so those are declared too.
+#
+# One candidate (instructor, unit, mode) -> propose-observations picks the observers and writes a batch of assignments ->
+# the coordinator approves the batch, which opens one `assignment` subject per approved row -> each assigned observer
+# observes (scores and evidence notes) and the instructor self-assesses -> release writes the `observation` events, but
+# only once EVERY assignment of the delivery has its observe sign-off: observers score blind to each other until both
+# have submitted (spec v0.2 Rules, "Fair reading of observations"). Until then the log holds only the sign-offs, which
+# carry hashes and no scores.
+#
+# Who may observe: instructors at level clearer AND calibrated on the day of the proposal (rules.is_calibrated over the
+# calibration events; a people-list `clearer` role does not make anyone a clearer, decision 0012 as amended), never the
+# instructor observed, and at most rules.clearance.max_coach_observers of the instructor's coaches. Coaches are per
+# instructor: a people.yaml row holding the `coach` role names the instructors it coaches in `coaches` (flows.common.coaches_of,
+# decision 0014), so a coach of someone else is an ordinary observer for this instructor (flows/observation.py). `signer`
+# (decision 0012) names who signs a step on an assignment from its attrs.
+#
+# Rounds: propose-observations refreshes. The first proposal is round 1 (delivery_ref <candidate-slug>-1). Once round n has
+# settled (approved, and every assignment of it released) it proposes round n+1 when the candidate's evidence still lacks
+# observations (rules.clearance_check) or a not_yet clearance / recheck round came after round n; a pending round is never
+# proposed again. Approving a round is a new sign-off: the page's inputs carry the round's rows and delivery_ref.
+#
+# Ad-hoc assignments: assign-observer is a separate coordinator step on the candidate (increment-3 plan J). The coordinator picks
+# an observer from the same pool as the proposals, the length, lead and mode and optionally a delivery reference; approving opens one
+# assignment through the same opener as the batch approval. No step needs it, it needs only open-candidates, and `bind: input` with
+# the number of ad-hoc assignments in its inputs opens it again after each approval, as log-activity does; it has no due date
+# because it is optional. The assignment's observe and self-assessment steps are the ordinary ones, except that an assignment
+# opened by assign-observer does not wait for the candidate's batch to be approved: its own approval stands in for it
+# (`needs_except_opened_by`, decision 0015, integration review finding 11). Joining a delivery whose assignments are released is refused.
+#
+# When an observer may sign: the sign-off's signed_at may not precede the day the assignment was opened (its `subject`
+# event), or lie more than a day after the ingest clock (bridge.apply_receipt, signoff.signed_at_reasons); the session date
+# the observer enters may not precede that day either, nor follow signed_at (flows/observation.py).
+# due {days} values and the observation_window rule are operational defaults (decision 0002), not evidence-based
+# thresholds: the observation window is 14 days from the day the assignment was opened.
+schema_version: 1
+id: tm:standards/workflows-observation
+status: draft
+workflows:
+  - id: tm:workflow/observation
+    name: W2 Observation
+    basis: "instructor-development-spec-v0.2 W2 Observation and Rules (clearance minimum, coach as observer, blind scoring); increment-2 plan section B; decision 0011"
+    event_kinds: [step, signoff, subject, observation, check]
+    steps:
+      - id: tm:step/propose-observations
+        name: Observers proposed for the candidate
+        type: auto
+        role: coordinator
+        subject: candidate
+        needs: [tm:step/open-candidates]
+        done_when: {kind: step, match: {step: tm:step/propose-observations}}
+        due: {days: 7, basis: operational default}
+        basis: "increment-2 plan B (hash-ranked rotation over clearers; enough observers for rules.clearance, at least one full lead observation); spec v0.2 Rules (coach as observer)"
+      - id: tm:step/assignments-approved
+        name: Observation assignments approved
+        type: human
+        role: coordinator
+        subject: candidate
+        needs: [tm:step/propose-observations]
+        done_when: {kind: signoff, match: {step: tm:step/assignments-approved}, bind: input}
+        due: {days: 7, basis: operational default}
+        page: batch_approve
+        basis: "spec v0.2 Users and roles (the coordinator schedules observations); increment-2 plan B (approval opens the assignment subjects)"
+      - id: tm:step/assign-observer
+        name: Ad-hoc observation assignment made by the coordinator
+        type: human
+        role: coordinator
+        subject: candidate
+        needs: [tm:step/open-candidates]
+        done_when: {kind: signoff, match: {step: tm:step/assign-observer}, bind: input}
+        page: approve
+        basis: "spec v0.2 Users and roles (the coordinator schedules observations); increment-3 plan J (an assignment opened from a page, not only by proposals)"
+      - id: tm:step/observe
+        name: Observation scored by the assigned observer
+        type: human
+        role: clearer
+        subject: assignment
+        needs: [tm:step/assignments-approved]
+        needs_except_opened_by: {tm:step/assignments-approved: [tm:step/assign-observer]}
+        signer: attrs.observer
+        done_when: {kind: signoff, match: {step: tm:step/observe}}
+        due: observation_window
+        page: approve
+        basis: "spec v0.2 W2 (observer form: rubric anchors, an evidence note per score, recording timestamps) and Rules (blind scoring)"
+      - id: tm:step/self-assessment
+        name: Self-assessment of the observed delivery
+        type: human
+        role: instructor
+        subject: assignment
+        needs: [tm:step/assignments-approved]
+        needs_except_opened_by: {tm:step/assignments-approved: [tm:step/assign-observer]}
+        signer: attrs.instructor
+        done_when: {kind: signoff, match: {step: tm:step/self-assessment}}
+        due: observation_window
+        page: self_assessment
+        basis: "spec v0.2 W2 (the instructor self-assesses the observed delivery)"
+      - id: tm:step/release
+        name: Observation released once every observer of the delivery has submitted
+        type: auto
+        role: coordinator
+        subject: assignment
+        needs: [tm:step/observe]
+        done_when: {kind: step, match: {step: tm:step/release}}
+        due: {days: 7, basis: operational default}
+        basis: "spec v0.2 Rules (observers score blind to each other until both submit); observation@2"

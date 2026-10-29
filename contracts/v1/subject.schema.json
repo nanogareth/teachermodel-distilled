@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/subject@1",
+  "title": "Subject event payload: opens a child subject (candidate, assignment, exercise)",
+  "description": "Carried by an event of kind `subject` (event@3, decision 0011). The event's subject_uri is the new subject; the workflow engine lists it as {kind: subject_kind, **attrs}. Attrs hold references only. check_event also requires the URI to fit the kind: a candidate's is derived from its attrs (workflow.candidate_uri), an assignment's and an exercise's end in 16 hex characters.",
+  "type": "object",
+  "required": ["subject_kind", "attrs", "opened_by"],
+  "additionalProperties": false,
+  "properties": {
+    "subject_kind": {"enum": ["candidate", "assignment", "exercise"]},
+    "attrs": {"type": "object"},
+    "opened_by": {
+      "type": "string",
+      "pattern": "^tm:(step|cli)/[a-z0-9][a-z0-9-]*$",
+      "description": "The step that opened the subject; a subject opened by a command (open-exercise) names it as tm:cli/<command>"
+    }
+  },
+  "$defs": {
+    "mode": {"enum": ["in-person", "remote", "hybrid"]},
+    "instructor": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+    "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+    "candidate": {
+      "type": "object",
+      "required": ["instructor", "unit", "mode"],
+      "additionalProperties": false,
+      "properties": {
+        "instructor": {"$ref": "#/$defs/instructor"},
+        "unit": {"$ref": "#/$defs/unit"},
+        "mode": {"$ref": "#/$defs/mode"}
+      }
+    },
+    "assignment": {
+      "type": "object",
+      "required": ["candidate", "instructor", "unit", "mode", "observer", "length", "lead", "delivery_ref"],
+      "additionalProperties": false,
+      "properties": {
+        "candidate": {"type": "string", "pattern": "^tm:candidate/[a-z0-9][a-z0-9-]*$"},
+        "instructor": {"$ref": "#/$defs/instructor"},
+        "unit": {"$ref": "#/$defs/unit"},
+        "mode": {"$ref": "#/$defs/mode"},
+        "observer": {"$ref": "#/$defs/instructor"},
+        "length": {"enum": ["full", "short"]},
+        "lead": {"type": "boolean"},
+        "delivery_ref": {"type": "string", "minLength": 1, "description": "The delivery id or session reference, not a person's name"},
+        "recording_ref": {"type": "string", "minLength": 1, "description": "Key into the private store"}
+      }
+    },
+    "exercise": {
+      "type": "object",
+      "required": ["unit", "rubric_version", "recording_ref", "observers", "reference_key"],
+      "additionalProperties": false,
+      "properties": {
+        "unit": {"$ref": "#/$defs/unit"},
+        "rubric_version": {"type": "string", "minLength": 1},
+        "recording_ref": {"type": "string", "minLength": 1, "description": "Key into the private store"},
+        "observers": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/instructor"}},
+        "reference_key": {"type": "string", "minLength": 1, "description": "Key of the reference scores in the private store; the scores never enter events"}
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"subject_kind": {"const": "candidate"}}, "required": ["subject_kind"]},
+      "then": {"properties": {"attrs": {"$ref": "#/$defs/candidate"}}}
+    },
+    {
+      "if": {"properties": {"subject_kind": {"const": "assignment"}}, "required": ["subject_kind"]},
+      "then": {"properties": {"attrs": {"$ref": "#/$defs/assignment"}}}
+    },
+    {
+      "if": {"properties": {"subject_kind": {"const": "exercise"}}, "required": ["subject_kind"]},
+      "then": {"properties": {"attrs": {"$ref": "#/$defs/exercise"}}}
+    }
+  ]
+}

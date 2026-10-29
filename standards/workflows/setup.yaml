@@ -1,0 +1,89 @@
+# Setup workflow (tm:contract/workflows@1). Spec: docs/specs/2026-10-24-workflow-automation-design.md §3, §7.
+# The privacy steps (ROPA, DPIA screening, retention, notice text) moved to privacy-base.yaml; their ids are unchanged except
+# retention-periods -> retention-approved and notice-text-approved -> notice-approved.
+# Event kinds in done_when: signoff, notice, check, step (declared in event_kinds below).
+# auto steps complete on a `step` event {step: <id>}; human steps on a `signoff` event {step: <id>};
+# verify steps on a `check` event {step: <id>, result: ok}, except "Notice sent", which completes on `notice`.
+# "Notice sent" completes on a `notice` event whose notice_variant is the one the instructor is owed: the base notice
+# (<notice_version>) for a base-profile jurisdiction, else the variant (<notice_version>-<code>); see ${subject.notice_variant}.
+# due {days} values are operational defaults (decision 0002), not evidence-based thresholds.
+schema_version: 1
+id: tm:standards/workflows-setup
+status: draft
+workflows:
+  - id: tm:workflow/setup
+    name: Setup (privacy and store preconditions, roster, gap list)
+    basis: "workflow-automation-design §7; decisions 0003, 0005, 0006"
+    event_kinds: [step, signoff, check, notice]
+    steps:
+      - id: tm:step/it-request
+        name: IT request
+        type: auto
+        role: it
+        subject: programme
+        needs: []
+        done_when: {kind: step, match: {step: tm:step/it-request}}
+        due: {days: 5, basis: operational default}
+        basis: "workflow-automation-design §7 IT request; decision 0006"
+      - id: tm:step/it-done
+        name: IT done
+        type: human
+        role: it
+        subject: programme
+        needs: [tm:step/it-request]
+        done_when: {kind: signoff, match: {step: tm:step/it-done}}
+        due: {days: 10, basis: operational default}
+        page: approve
+        basis: "workflow-automation-design §7 IT done; decision 0006"
+      - id: tm:step/library-exists
+        name: Library exists
+        type: verify
+        role: programme-owner
+        subject: programme
+        needs: [tm:step/it-done]
+        done_when: {kind: check, match: {step: tm:step/library-exists, result: ok}}
+        due: {days: 2, basis: operational default}
+        basis: "workflow-automation-design §7 Library exists; decision 0006"
+      - id: tm:step/roster-import
+        name: Roster import
+        type: auto
+        role: programme-owner
+        subject: programme
+        needs: [tm:step/library-exists, tm:step/base-profile-verified, tm:step/dpia-screening, tm:step/retention-approved]
+        done_when: {kind: step, match: {step: tm:step/roster-import}}
+        basis: "workflow-automation-design §7 Roster import; 0006 Before real data; privacy-jurisdictions-design §4 (the base workflow is complete before real data); contract tm:contract/roster@2"
+      - id: tm:step/notice-drafts
+        name: Notice drafts
+        type: auto
+        role: programme-owner
+        subject: instructor
+        needs: [tm:step/notice-approved, tm:step/roster-import, tm:step/variant-approved]
+        done_when: {kind: step, match: {step: tm:step/notice-drafts}}
+        basis: "workflow-automation-design §7 Notice drafts; privacy-jurisdictions-design §4 (an overlay instructor's draft waits for the approved variant of their jurisdiction)"
+      - id: tm:step/notice-sent
+        name: Notice sent
+        type: verify
+        role: programme-owner
+        subject: instructor
+        needs: [tm:step/notice-drafts]
+        done_when: {kind: notice, match: {step: tm:step/notice-sent, notice_variant: "${subject.notice_variant}"}}
+        due: {days: 7, basis: operational default}
+        basis: "workflow-automation-design §7 Notice sent; roster contract notice.given_on; privacy-jurisdictions-design §4 (matches the variant)"
+      - id: tm:step/gap-list
+        name: Gap list
+        type: auto
+        role: programme-owner
+        subject: programme
+        needs: [tm:step/roster-import]
+        done_when: {kind: step, match: {step: tm:step/gap-list}}
+        basis: "workflow-automation-design §7 Gap list; rules.staffing_check"
+      - id: tm:step/gap-list-approved
+        name: Gap list agreed
+        type: human
+        role: programme-owner
+        subject: programme
+        needs: [tm:step/gap-list]
+        done_when: {kind: signoff, match: {step: tm:step/gap-list-approved}, bind: input, revocable: true}
+        due: {days: 7, basis: operational default}
+        page: batch_approve
+        basis: "workflow-automation-design §7 Gap list (owner agrees it; phase 1 gate)"

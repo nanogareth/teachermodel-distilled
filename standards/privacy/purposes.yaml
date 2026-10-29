@@ -1,0 +1,349 @@
+# Purposes of processing (tm:contract/purposes@1). Design:
+# docs/specs/2026-10-24-privacy-jurisdictions-design.md, section 3.
+#
+# DRAFT, AI-assisted. Each description is written to the instructor, for the privacy notice.
+# proposed_basis is a proposal for internal legal, who confirm the basis per purpose when they
+# verify each jurisdiction profile. Not legal advice.
+#
+# proposed_basis.reason is for legal and the head of training and is never printed in the notice.
+# proposed_basis.notice_text is what the instructor is told, in plain language; wording that states
+# what the law requires carries "(legal review)". The notice prints notice_text only.
+#
+# categories: data category ids from setup.data_categories().
+# workflows: workflows that exist now (validate checks each is defined).
+# planned_workflows: proposed ids for spec v0.2 W2-W12 and the privacy workflows of the design,
+# which do not exist yet (validate does not require them, and refuses one that now exists as a
+# workflow file: move it to workflows). Reconcile each when its workflow file is added. Proposed numbering: dry-run W3, clearance W4, calibration W5, audit W6, coaching W7,
+# quality-review W8, cpd W9, bench W10, partner W11, unit-readiness W12, observation W2. W8 was built
+# as tm:workflow/quality; W6, W7, W9 and W10 under their proposed ids (increment 3).
+#
+# review_notes: every judgement call, for legal and the head of training.
+
+schema_version: 1
+status: draft
+drafted_by: ai-assisted
+purposes:
+- id: tm:purpose/clearance-decision
+  name: Clearance decision
+  description: We decide whether you are cleared to teach a module, in which modes and regions, and
+    until when. Two calibrated clearers decide, using at least two observations by different observers
+    and a passed dry-run. The rules only check that the evidence is complete; people make the decision.
+    You can reply to and appeal every decision.
+  workflows:
+  - tm:workflow/pathway
+  - tm:workflow/observation
+  - tm:workflow/dry-run
+  - tm:workflow/clearance
+  planned_workflows:
+  - tm:workflow/partner
+  - tm:workflow/unit-readiness
+  categories:
+  - identity-data
+  - pseudonymous-identifier
+  - employment-and-training-data
+  - delivery-data
+  - performance-data
+  - record-of-actions
+  proposed_basis:
+    tm:jurisdiction/ie:
+      basis: legitimate-interests
+      reason: Learners are taught by instructors cleared against a written standard; contract is the
+        alternative for engaged instructors.
+      notice_text: The interest is that learners are taught by instructors who have been shown to meet a written
+        standard, which this record lets us show. You can object at any time (legal review).
+    tm:jurisdiction/us-ca:
+      basis: disclosed-purpose
+      reason: CCPA needs no basis; use must stay reasonably necessary and proportionate to this disclosed
+        purpose (1798.100(c)).
+      notice_text: We use your personal information for clearance decisions only, and for nothing that does not fit
+        that purpose. If we ever want a new use, we tell you first (legal review).
+- id: tm:purpose/coaching
+  name: Coaching
+  description: Every active instructor has a coach. Each cycle, your coach observes you, gives feedback
+    on one or two areas, sets a practice task and observes again. Your coaching record also seeds
+    your development (CPD) plan. Coaching records stay within the training function; your manager
+    never sees them.
+  workflows:
+  - tm:workflow/observation
+  - tm:workflow/coaching
+  - tm:workflow/cpd
+  categories:
+  - identity-data
+  - pseudonymous-identifier
+  - employment-and-training-data
+  - performance-data
+  - record-of-actions
+  proposed_basis:
+    tm:jurisdiction/ie:
+      basis: legitimate-interests
+      reason: Coaching is required for every active instructor, so consent would not be free; the
+        interest is better teaching.
+      notice_text: The interest is better teaching, because every active instructor has a coach and coaching only
+        works with a record of what was observed and agreed. You can object at any time (legal review).
+    tm:jurisdiction/us-ca:
+      basis: disclosed-purpose
+      reason: Use limited to the disclosed coaching purpose (1798.100(c)).
+      notice_text: We use your personal information for coaching only, and for nothing that does not fit that
+        purpose. If we ever want a new use, we tell you first (legal review).
+- id: tm:purpose/calibration-and-audit
+  name: Calibration and audit
+  description: We check that observers score fairly and consistently. Observers score the same reference
+    recording, and each quarter a sample of live observations is scored again by a second observer
+    from the recording. If you observe others, your own scores are checked this way. If you are observed,
+    your session may be in the sample.
+  workflows:
+  - tm:workflow/calibration
+  - tm:workflow/audit
+  categories:
+  - pseudonymous-identifier
+  - delivery-data
+  - performance-data
+  - record-of-actions
+  proposed_basis:
+    tm:jurisdiction/ie:
+      basis: legitimate-interests
+      reason: Reliable observers protect instructors from unfair decisions; it is required of every
+        observer.
+      notice_text: The interest is fair scoring, because checking that observers score consistently protects
+        instructors from unfair decisions. You can object at any time (legal review).
+    tm:jurisdiction/us-ca:
+      basis: disclosed-purpose
+      reason: Use limited to the disclosed calibration and audit purpose (1798.100(c)).
+      notice_text: We use your personal information to check that observers score fairly, and for nothing that does
+        not fit that purpose. If we ever want a new use, we tell you first (legal review).
+- id: tm:purpose/quality-review
+  name: Quality review
+  description: After each delivery and each month, we compare learner results for your sessions with
+    the cohort baseline. We hold only totals and averages, never learner names, and hide results for
+    groups under the minimum size. A low result can start extra coaching or another observation. It
+    never leads to a bench decision on its own.
+  workflows:
+  - tm:workflow/quality
+  categories:
+  - pseudonymous-identifier
+  - delivery-data
+  - performance-data
+  proposed_basis:
+    tm:jurisdiction/ie:
+      basis: legitimate-interests
+      reason: Finding where coaching should focus; safeguards are the baseline, the minimum count
+        and no bench trigger alone.
+      notice_text: The interest is knowing where coaching is most useful, from learner results held only as totals
+        and averages. A low result never leads to a bench decision on its own. You can object at any
+        time (legal review).
+    tm:jurisdiction/us-ca:
+      basis: disclosed-purpose
+      reason: Use limited to the disclosed quality-review purpose (1798.100(c)).
+      notice_text: We use delivery results for quality review only, and for nothing that does not fit that purpose.
+        If we ever want a new use, we tell you first (legal review).
+- id: tm:purpose/bench-decision
+  name: Bench decision
+  description: When your contract is ending, quality results repeatedly call for it, or you ask for it,
+    the head of training reviews whether you keep teaching. The review rests on an evidence pack that
+    holds your clearances, observations by at least two observers, learner results as totals and
+    averages, your coaching and your development record. The head of training decides to renew, convert, return you to
+    co-teaching or end your teaching, and writes down why. Learner results never start this review on
+    their own; it also needs an observation that confirms the concern, or a coaching cycle that did not
+    help. Your manager and anyone running a performance review see only your clearance status (which
+    modules you are cleared to teach, and until when), not the decision, the reasons or the evidence
+    (decision 0005).
+  workflows:
+  - tm:workflow/bench
+  categories:
+  - performance-data
+  - employment-and-training-data
+  - record-of-actions
+  proposed_basis:
+    tm:jurisdiction/ie:
+      basis: legitimate-interests
+      reason: The decision is about continued teaching work and rests on a complete, documented evidence
+        pack; contract is the alternative where the decision applies the engagement itself. Needs a
+        balancing test and a separate notice line (decision 0005 does not cover it).
+      notice_text: The interest is that the people who teach have been shown to teach well, and that a decision to
+        change or end someone's teaching rests on a complete record. A person decides and writes down the reason.
+        Your manager sees your clearance status only. You can object at any time (legal review).
+    tm:jurisdiction/us-ca:
+      basis: disclosed-purpose
+      reason: Use limited to the disclosed bench-decision purpose (1798.100(c)); this is a different use
+        from coaching and must be disclosed as such.
+      notice_text: We use your personal information for bench decisions only, and for nothing that does not fit that
+        purpose. If we ever want a new use, we tell you first (legal review).
+- id: tm:purpose/staffing-check
+  name: Staffing check
+  description: When someone schedules you to teach, the scheduling system checks that you are cleared
+    for that module and mode. It receives only your clearance status (which modules, until when),
+    never your scores or notes. The same check lists sessions you teach today without a clearance,
+    so we can plan your observations.
+  workflows:
+  - tm:workflow/setup
+  - tm:workflow/clearance
+  - tm:workflow/override
+  categories:
+  - pseudonymous-identifier
+  - employment-and-training-data
+  - delivery-data
+  - record-of-actions
+  proposed_basis:
+    tm:jurisdiction/ie:
+      basis: legitimate-interests
+      reason: Only cleared instructors are staffed; scheduling sees status only (decision 0005). Contract
+        is the alternative.
+      notice_text: The interest is that only cleared instructors are scheduled to teach. The scheduling system sees
+        your clearance status only, never your scores or notes. You can object at any time (legal
+        review).
+    tm:jurisdiction/us-ca:
+      basis: disclosed-purpose
+      reason: Use limited to the disclosed staffing purpose (1798.100(c)).
+      notice_text: We use your clearance status to check that you may be scheduled to teach, and for nothing that
+        does not fit that purpose. If we ever want a new use, we tell you first (legal review).
+- id: tm:purpose/train-the-trainer
+  name: Train-the-trainer pathway
+  description: When you join, we record your baseline self-assessment against the framework, your
+    train-the-trainer completion, your shadow and co-delivered sessions, and your move to leading
+    under observation. For staff engineers your manager confirms protected teaching time; for partner
+    instructors your partner lead nominates you.
+  workflows:
+  - tm:workflow/onboarding
+  planned_workflows:
+  - tm:workflow/partner
+  categories:
+  - identity-data
+  - pseudonymous-identifier
+  - employment-and-training-data
+  - delivery-data
+  - performance-data
+  - record-of-actions
+  proposed_basis:
+    tm:jurisdiction/ie:
+      basis: legitimate-interests
+      reason: The pathway, self-assessment included, is required before leading sessions; EDPB 05/2020
+        para 21 rules out consent for assessment forms.
+      notice_text: The interest is a sound start, because the pathway, including the self-assessment, is required
+        before you lead sessions and gives you and us a baseline. You can object at any time (legal
+        review).
+    tm:jurisdiction/us-ca:
+      basis: disclosed-purpose
+      reason: Use limited to the disclosed pathway purpose (1798.100(c)).
+      notice_text: We use your personal information for the train-the-trainer pathway only, and for nothing that
+        does not fit that purpose. If we ever want a new use, we tell you first (legal review).
+- id: tm:purpose/record-of-actions
+  name: Record of actions
+  description: Every decision, sign-off and correction, and every time someone opens your record,
+    is added to a log that is never edited. It shows who decided what, on which evidence. The log
+    uses an identifier, not your name. It lets you check how a decision was made and supports your
+    replies and appeals.
+  workflows:
+  - tm:workflow/setup
+  - tm:workflow/onboarding
+  - tm:workflow/privacy-base
+  - tm:workflow/pathway
+  - tm:workflow/observation
+  - tm:workflow/dry-run
+  - tm:workflow/calibration
+  - tm:workflow/audit
+  - tm:workflow/coaching
+  - tm:workflow/quality
+  - tm:workflow/cpd
+  - tm:workflow/bench
+  - tm:workflow/clearance
+  - tm:workflow/override
+  - tm:workflow/privacy-overlay
+  planned_workflows:
+  - tm:workflow/partner
+  - tm:workflow/unit-readiness
+  categories:
+  - pseudonymous-identifier
+  - record-of-actions
+  proposed_basis:
+    tm:jurisdiction/ie:
+      basis: legitimate-interests
+      reason: Showing decisions rest on evidence, and handling replies, appeals and claims; legal
+        may use Art. 6(1)(c) for accountability parts.
+      notice_text: The interest is showing that decisions rested on evidence, and handling your replies, appeals
+        and any claim. For some of it we may also be required by law to keep a record (legal review).
+    tm:jurisdiction/us-ca:
+      basis: disclosed-purpose
+      reason: Use limited to the disclosed record-keeping purpose (1798.100(c)).
+      notice_text: We use the log to show how decisions were made and to handle your replies and appeals, and for
+        nothing that does not fit that purpose. If we ever want a new use, we tell you first (legal
+        review).
+- id: tm:purpose/privacy-administration
+  name: Privacy administration
+  description: We record which version of this notice you received and when, which privacy law applies
+    where you work, and the requests you make about your data. We use your email address to send you
+    the notice.
+  workflows:
+  - tm:workflow/setup
+  - tm:workflow/privacy-base
+  - tm:workflow/privacy-overlay
+  categories:
+  - identity-data
+  - pseudonymous-identifier
+  - employment-and-training-data
+  - record-of-actions
+  proposed_basis:
+    tm:jurisdiction/ie:
+      basis: legal-obligation
+      reason: Showing the transparency duties (GDPR Arts 12-14) were met; legitimate interests is
+        the fallback.
+      notice_text: We keep this record because the law requires us to show that you were given this notice and that
+        your requests were handled (legal review).
+    tm:jurisdiction/us-ca:
+      basis: disclosed-purpose
+      reason: Needed to give the notice at collection (1798.100(a)); use limited to that purpose.
+      notice_text: We collect this to give you this notice when we collect your information, and use it for that
+        and to handle your requests only (legal review).
+review_notes:
+- 'decision-0005-text: the draft text for the decision 0005 answer, as drafted with the purposes:
+  Your observation scores, evidence notes, self-assessments and coaching records are used only by
+  the technical training function, to coach you and to decide clearances. Your manager and anyone
+  running a performance review see only your clearance status.'
+- 'bench-decision-purpose: W10 bench decisions (renew, convert, return to co-teaching, exit) are
+  drafted as a separate purpose, tm:purpose/bench-decision (decision 0014), because decision 0005
+  tells instructors their records are used "to coach you and to decide clearances" and a bench
+  decision, especially exit, is a different use. A separate purpose is required before W10 holds real
+  data: legal and the head of training must confirm the basis per jurisdiction, the notice line and
+  the retention periods for it, and decide whether decision 0005 needs a second sentence. The
+  proposed bases and notice text are drafts. Adding this purpose changes the bytes of this file, which
+  reopens legal verification of every profile by design. tm:workflow/bench also stays under record of
+  actions.'
+- 'increment-3-workflows: W6 audit, W7 coaching, W8 quality (built as tm:workflow/quality, not the
+  proposed quality-review id), W9 CPD and W10 bench now exist, so they move from planned_workflows to
+  workflows of their purposes and of record of actions. This changes the bytes of this file, which
+  reopens legal verification of every profile by design. W11 partner and W12 unit readiness were built
+  inside the clearance and pathway workflows, not as files of their own; their planned ids stay until
+  legal decides whether the notice should name them.'
+- 'increment-3-carried: the clearance and privacy-overlay workflow files existed while their ids
+  were still planned. They move to workflows (clearance under clearance decision, staffing check
+  and record of actions; privacy-overlay under privacy administration and record of actions), and
+  validate now refuses a planned id that exists as a file, so the lists cannot drift again. The new
+  override workflow (the head of training overrides a staffing block, spec Rules) sits under staffing
+  check and record of actions. This changes the bytes of this file, which reopens legal verification
+  of every profile by design.'
+- 'bench-decision-0005: integration review findings 1 and 12 (decision 0015, amended 2026-10-25). The
+  bench-decision description now says what the code does: outcome triggers open a review only with an
+  observation trigger or a coaching cycle that did not improve its focus, and the manager sees
+  clearance status only (decision 0005), as the staffing check sends delivery scheduling only "not
+  cleared", "clearance expiring", "recheck due" or "override <id>". This changes the bytes of this
+  file, which reopens legal verification of every profile by design.'
+- 'cpd-under-coaching: W9 CPD is placed under coaching because its plan is seeded from coaching and
+  observation records.'
+- 'observation-serves-two-purposes: W2 observations feed both coaching and clearance decisions. It
+  is listed under coaching; clearance draws on the same records. Legal to confirm one notice line
+  can cover both.'
+- 'outcome-summaries-category: Quality review uses per-delivery outcome summaries, which are personal
+  data about the instructor. setup.data_categories has no category for them ("Performance data" lists
+  only observation fields). The J1+J2 category ids should add one.'
+- 'notice-fields-category: jurisdiction and notice (version, given_on) fall under "Employment and
+  training data" in setup.data_categories because it takes every other roster field. A separate category
+  for privacy administration may read better in the notice.'
+- 'observers-as-subjects: Calibration and audit process data about observers (often instructors themselves).
+  Their notice must cover it.'
+- 'consent-candidates: No purpose is proposed on consent. None is optional: the self-assessment is
+  a required W1 step. If a self-assessment or any recording reuse became truly optional with no consequence,
+  it could become a consent purpose under design section 5.'
+- 'planned-workflow-ids: The planned workflow ids are proposals and must be reconciled when each workflow
+  file is added.'
+- 'us-ca-basis-vocabulary: disclosed-purpose is not a legal basis. It records that California law
+  has no basis requirement and limits use to the disclosed purpose. The GDPR basis from the Irish
+  base still applies to California instructors.'

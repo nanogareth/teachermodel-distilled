@@ -1,0 +1,34 @@
+# FICTIONAL fixture for tests of tm:contract/jurisdiction@1. Not a legal profile; no rule here is real.
+schema_version: 1
+id: tm:jurisdiction/yy-aa
+name: Fictional State (test overlay)
+codes: [YY-AA]
+role: overlay
+laws:
+  - name: Fictional Privacy Rights Act
+regulator:
+  name: Fictional Privacy Agency
+lawful_bases: {}
+consent_valid_in_employment: true
+notice_elements:
+  - id: categories-collected
+    requirement: The categories of personal information collected, at or before collection.
+    citation: "Fictional Privacy Rights Act s.1"
+retention_limits: []
+dpia_triggers: []
+transfers: []
+rights:
+  - right: delete
+    deadline_days: 45
+    citation: "Fictional Privacy Rights Act s.2"
+breach_notification:
+  individuals: as required by state law
+  citation: "Fictional Privacy Rights Act s.3"
+sources:
+  - title: Fictional Privacy Rights Act
+    url: "https://example.test/laws/fpra"
+    accessed: "2026-10-24"
+status: draft
+drafted_by: ai-assisted
+review_notes:
+  - Fixture only.

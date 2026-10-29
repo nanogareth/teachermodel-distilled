@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/plan@1",
+  "title": "Read plan for the M365 driver bridge",
+  "description": "Hub candidate. A list of read-only operations a driver (connector, graph or fixture) executes verbatim. op_id is the first 16 hex of sha256 of the canonical {op, args}, so re-planning the same operation gives the same id. The receipt echoes the sha256 of the canonical {created, ops}, so a receipt cannot be replayed against a later plan. file.get is reserved for the Graph driver: the connector cannot report who uploaded a file.",
+  "type": "object",
+  "required": ["schema", "created", "ops"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/plan@1"},
+    "created": {"type": "string", "minLength": 10},
+    "ops": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["op_id", "op", "args", "step", "subject"],
+        "additionalProperties": false,
+        "properties": {
+          "op_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+          "op": {"enum": ["site.library", "mail.sent", "mail.tagged", "file.get", "meeting.recording"]},
+          "args": {"type": "object"},
+          "step": {"anyOf": [{"type": "string", "pattern": "^tm:step/"}, {"type": "null"}]},
+          "subject": {"anyOf": [{"type": "string", "pattern": "^(tm|sl):[a-z-]+/"}, {"type": "null"}]}
+        }
+      }
+    }
+  }
+}

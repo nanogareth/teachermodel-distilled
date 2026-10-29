@@ -1,0 +1,24 @@
+# Fictional example unit: a local, pinned mirror of the part of a curriculum unit that teachermodel reads
+# (tm:contract/unit-requirements@1). One file per unit version, named for its id. The curriculum system owns the real unit.
+# A dry run is bound to the hash of environment, failure_catalogue and run_sheet (units.environment_sha256).
+schema_version: 1
+id: sl:unit/example-agent-loop@1
+title: Building a tool-using agent loop
+status: draft
+learning_outcomes:
+  - Implement a tool-use loop that handles tool errors and stop conditions
+delivery_modes: [in-person, remote, hybrid]
+environment: Sandbox project with scoped API keys; pinned model version
+# v0.2: per-topic diagnostic pre-check (expertise reversal)
+pre_check:
+  - topic: tool-use loop
+    question: Which stop condition prevents an agent from calling tools forever?
+    routes: {correct: skip worked example, incorrect: worked example first}
+# v0.2: wrong answers of diagnostic questions map to these
+misconceptions:
+  - id: model-retries-itself
+    statement: The model will retry a failed tool call without the loop returning the error
+failure_catalogue:
+  - id: rate-limit
+    inject: Lower the sandbox rate limit before the lab
+    expected_handling: Explain backoff, switch to the pre-computed outputs

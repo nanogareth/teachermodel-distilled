@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/audit@1",
+  "title": "Audit event payload (W6)",
+  "description": "The agreement between a live observation and its second scoring from the recording, computed by rules.inter_observer_agreement against the calibration thresholds. Shares and flags only: neither observer's scores enter the event log. agreed false refers the first observer back to W5 (referred_to_calibration), which lapses their calibration until their next passed one.",
+  "type": "object",
+  "required": ["sample", "observation", "observer", "second_observer", "within_one_share", "exact_share", "agreed", "referred_to_calibration", "signoff_id"],
+  "additionalProperties": false,
+  "properties": {
+    "sample": {"type": "string", "pattern": "^tm:sample/[^\\s/]+--[^\\s/]+$"},
+    "observation": {"type": "string", "minLength": 8, "description": "Id of the observation event audited"},
+    "observer": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$", "description": "The first observer, whose scoring is audited"},
+    "second_observer": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+    "within_one_share": {"type": "number", "minimum": 0, "maximum": 1},
+    "exact_share": {"type": "number", "minimum": 0, "maximum": 1},
+    "agreed": {"type": "boolean"},
+    "referred_to_calibration": {"type": "boolean"},
+    "signoff_id": {"type": "string", "pattern": "^[0-9a-f]{16,}$", "description": "The second observer's scoring sign-off the result was computed from"}
+  }
+}

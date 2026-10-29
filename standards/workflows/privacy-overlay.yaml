@@ -1,0 +1,86 @@
+# Privacy-overlay workflow (tm:contract/workflows@1). Spec: docs/specs/2026-10-24-privacy-jurisdictions-design.md §2, §4;
+# decisions 0005, 0009, 0010. One run per jurisdiction subject: a registration jurisdiction the base profile does not
+# cover (workflow.subjects), so the steps open on their own when a roster brings a new code. The base profile covers
+# everyone; an overlay profile adds the duties of the instructor's own jurisdiction, and the stricter rule holds.
+# Event kinds in done_when: step, signoff (declared in event_kinds below).
+# auto steps complete on a `step` event {step: <id>}; human steps on a `signoff` event {step: <id>}.
+# `bind: input` steps are done only while the newest approving sign-off's input_sha256 equals the hash of the inputs the
+# page shows now. Every overlay input carries the base profile's hash too, so editing the base reopens the overlay
+# approvals, and editing the overlay profile, a retention entry or the notice text reopens the approvals that depend on it.
+# `dpia-delta` is `skippable`: when the overlay adds no trigger the base screening does not cover, the auto step
+# `dpia-delta-check` closes it with a `step` event {step: tm:step/dpia-delta, skipped: true, reason: "no delta"}.
+# due {days} values are operational defaults (decision 0002), not evidence-based thresholds.
+schema_version: 1
+id: tm:standards/workflows-privacy-overlay
+status: draft
+workflows:
+  - id: tm:workflow/privacy-overlay
+    name: "Privacy overlay (per jurisdiction: profile, retention check, DPIA delta, notice variant)"
+    basis: "privacy-jurisdictions-design §2, §4; decisions 0005, 0009, 0010"
+    event_kinds: [step, signoff]
+    steps:
+      - id: tm:step/profile-present
+        name: Overlay profile present
+        type: auto
+        role: legal
+        subject: jurisdiction
+        needs: []
+        done_when: {kind: step, match: {step: tm:step/profile-present}}
+        due: {days: 14, basis: operational default}
+        basis: "privacy-jurisdictions-design §4 (blocked with 'no profile for <code>' until a profile with role overlay covers the code)"
+      - id: tm:step/profile-verified
+        name: Overlay profile verified
+        type: human
+        role: legal
+        subject: jurisdiction
+        needs: [tm:step/profile-present]
+        done_when: {kind: signoff, match: {step: tm:step/profile-verified}, bind: input, revocable: true}
+        due: {days: 21, basis: operational default}
+        page: approve
+        basis: "privacy-jurisdictions-design §2, §4 (internal legal signs the exact file bytes, with the base profile's hash); decision 0009"
+      - id: tm:step/retention-check
+        name: Retention checked against the overlay limits
+        type: auto
+        role: head-of-training
+        subject: jurisdiction
+        needs: [tm:step/profile-verified, tm:step/retention-approved]
+        done_when: {kind: step, match: {step: tm:step/retention-check}}
+        due: {days: 7, basis: operational default}
+        basis: "privacy-jurisdictions-design §2, §4 (merged base and overlay retention; the stricter rule holds: shorter maximum, longer minimum); decision 0010"
+      - id: tm:step/dpia-delta-check
+        name: DPIA delta worked out
+        type: auto
+        role: dpo
+        subject: jurisdiction
+        needs: [tm:step/profile-verified, tm:step/dpia-screening]
+        done_when: {kind: step, match: {step: tm:step/dpia-delta-check}}
+        due: {days: 7, basis: operational default}
+        basis: "privacy-jurisdictions-design §4 (dpia-delta applies only when the overlay adds a trigger the base screening did not cover; otherwise skipped with 'no delta')"
+      - id: tm:step/dpia-delta
+        name: DPIA delta decided
+        type: human
+        role: dpo
+        subject: jurisdiction
+        needs: [tm:step/profile-verified, tm:step/dpia-delta-check]
+        done_when: {kind: signoff, match: {step: tm:step/dpia-delta}, bind: input, skippable: true, revocable: true}
+        due: {days: 14, basis: operational default}
+        page: dpia_screening
+        basis: "privacy-jurisdictions-design §4 (DPO decides the overlay's extra triggers; only 'dpia-not-required' completes it)"
+      - id: tm:step/notice-variant
+        name: Notice variant rendered
+        type: auto
+        role: programme-owner
+        subject: jurisdiction
+        needs: [tm:step/profile-verified, tm:step/retention-check, tm:step/dpia-delta, tm:step/notice-approved]
+        done_when: {kind: step, match: {step: tm:step/notice-variant}}
+        basis: "privacy-jurisdictions-design §4 (base notice plus the overlay's notice elements; variant id <notice_version>-<code>)"
+      - id: tm:step/variant-approved
+        name: Notice variant approved
+        type: human
+        role: programme-owner
+        subject: jurisdiction
+        needs: [tm:step/profile-verified, tm:step/notice-variant, tm:step/notice-approved]
+        done_when: {kind: signoff, match: {step: tm:step/variant-approved}, bind: input, revocable: true}
+        due: {days: 7, basis: operational default}
+        page: approve
+        basis: "privacy-jurisdictions-design §4 (owner approves the exact variant text, both profiles and the retention it was rendered against; waits for the base notice approval, which waits for the retention approval)"

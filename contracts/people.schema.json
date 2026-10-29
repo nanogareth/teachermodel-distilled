@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/people@1",
+  "title": "People who act in the system: identity and roles (private store, identities/people.yaml)",
+  "description": "Holds names and emails, so the live file lives only in the private store (decision 0006). Role slugs are checked against config.ROLES in code, which keeps one list of roles.",
+  "type": "object",
+  "required": ["schema", "people"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/people@1"},
+    "people": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/person"}}
+  },
+  "$defs": {
+    "person": {
+      "type": "object",
+      "required": ["person", "name", "email", "roles"],
+      "additionalProperties": false,
+      "properties": {
+        "person": {"type": "string", "pattern": "^tm:person/[a-z0-9][a-z0-9-]*$"},
+        "name": {"type": "string", "minLength": 1},
+        "email": {"type": "string", "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"},
+        "roles": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"}},
+        "instructor": {
+          "type": "string",
+          "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$",
+          "description": "Optional, additive to people@1 (decision 0012). The roster instructor this person is: the only link between a people-list person and an instructor URI. A mapped person acts as that instructor in sign-offs (signer = the instructor URI, sender = the person's mailbox), holds their roles in the people list and, when the instructor is registered, counts as a clearer or coach for the observation rotation if they hold that role. Nothing is inferred from slugs or mailboxes."
+        },
+        "coaches": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+          "description": "Optional, additive to people@1 (decision 0014), only on a row holding the coach role (config.people checks this). The instructors this person coaches (W7). flows.common.coaches_of reads it: a coach of an instructor is the `instructor` this person is mapped to, and a coach with no mapping is ignored for the observer and clearer limits, which are about instructor URIs. A coach who lists nobody coaches nobody."
+        }
+      }
+    }
+  }
+}

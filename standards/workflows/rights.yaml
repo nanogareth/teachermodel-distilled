@@ -1,0 +1,45 @@
+# Instructor rights workflow (tm:contract/workflows@1). Spec v0.2, Privacy, consent and fairness: "Full view of their own
+# record, a reply on every decision, an appeal to the head of training"; Acceptance: "An instructor can see their
+# whole record and reply to any decision". Increment 4 item 4; decision 0021.
+# Event kinds in done_when: signoff. The workflow also writes `step` events (each reply or appeal, with the decision it is
+# on and the private key of its text), `subject` events (an appeal is a child subject) and `check` events (the head's
+# decision on an appeal: upheld or varied), so those are declared too.
+#
+# reply-or-appeal  the instructor's own optional page: pick one of their decisions (a clearance, a level change, a bench
+#                  decision, an override decided for them, an audit that referred them back to calibration), reply to it
+#                  or appeal it, in their own words (private). `bind: input` with the number of replies in the inputs
+#                  makes the page open again after each one; it is never due (an optional record).
+# appeal-decision  the head of training (never the instructor concerned) upholds the decision or varies it, with
+#                  a reason that stays private. Varied means the head then acts through the ordinary workflow (a new
+#                  clearance round, a revocation, a level decision); the appeal records the decision, it changes no record
+#                  by itself. One decision per appeal: the first accepted decision stands.
+#
+# due {days} is an operational default (decision 0002), not an evidence-based threshold.
+schema_version: 1
+id: tm:standards/workflows-rights
+status: draft
+workflows:
+  - id: tm:workflow/rights
+    name: Instructor replies and appeals
+    basis: "instructor-development-spec-v0.2 Privacy (a reply on every decision, an appeal to the head of training) and Acceptance (reply to any decision); increment-4 plan item 4; decision 0021"
+    event_kinds: [signoff, step, subject, check]
+    steps:
+      - id: tm:step/reply-or-appeal
+        name: Reply to or appeal a decision
+        type: human
+        role: instructor
+        subject: instructor
+        needs: [tm:step/roster-import, tm:step/notice-sent, tm:step/variant-approved]  # their words are personal data
+        done_when: {kind: signoff, match: {step: tm:step/reply-or-appeal}, bind: input}
+        page: approve
+        basis: "spec v0.2 Privacy: instructor rights (a reply on every decision, an appeal)"
+      - id: tm:step/appeal-decision
+        name: Appeal decided by the head of training
+        type: human
+        role: head-of-training
+        subject: appeal
+        needs: []
+        done_when: {kind: signoff, match: {step: tm:step/appeal-decision}}
+        due: {days: 14, basis: operational default}
+        page: approve
+        basis: "spec v0.2 Privacy: an appeal to the head of training"

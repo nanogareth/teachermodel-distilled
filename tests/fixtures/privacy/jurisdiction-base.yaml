@@ -1,0 +1,55 @@
+# FICTIONAL fixture for tests of tm:contract/jurisdiction@1. Not a legal profile; no rule here is real.
+schema_version: 1
+id: tm:jurisdiction/xx
+name: Fictionland (test base)
+codes: [XX]
+role: base
+laws:
+  - name: Fictional Data Protection Act
+    citation: "https://example.test/laws/fdpa"
+regulator:
+  name: Fictional Data Protection Commission
+  url: "https://example.test/regulator"
+lawful_bases:
+  tm:purpose/test-clearance: [contract, legitimate-interests]
+  tm:purpose/test-reuse: [consent]
+consent_valid_in_employment: false
+notice_elements:
+  - id: controller-identity
+    requirement: Name and contact details of the controller.
+    citation: "Fictional Data Protection Act s.1"
+  - id: retention
+    requirement: The period each category is kept, or the criteria used to set it.
+    citation: "Fictional Data Protection Act s.2"
+retention_limits:
+  - category: performance-data
+    max_months: 60
+    citation: "Fictional Data Protection Act s.3"
+  - category: record-of-actions
+    min_months: 12
+    max_months: 120
+    citation: "Fictional Data Protection Act s.4"
+dpia_triggers:
+  - criterion: evaluation-scoring
+    citation: "Fictional Data Protection Act s.5"
+transfers:
+  - rule: Transfers outside Fictionland need an adequacy decision or safeguards.
+    citation: "Fictional Data Protection Act s.6"
+rights:
+  - right: access
+    deadline_days: 30
+    citation: "Fictional Data Protection Act s.7"
+  - right: object
+    citation: "Fictional Data Protection Act s.8"
+breach_notification:
+  regulator_hours: 72
+  individuals: without undue delay when the risk is high
+  citation: "Fictional Data Protection Act s.9"
+sources:
+  - title: Fictional Data Protection Act
+    url: "https://example.test/laws/fdpa"
+    accessed: "2026-10-24"
+status: draft
+drafted_by: human
+review_notes:
+  - Fixture only.

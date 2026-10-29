@@ -1,0 +1,32 @@
+# W8 Quality review workflow (tm:contract/workflows@1). Increment 3 plan section H; spec v0.2 W8 and Rules (minimum learners,
+# quality trigger, feedback trigger), Privacy (fair reading of outcomes, learner data).
+# Event kinds in done_when: step (the review has run for the instructor). The workflow also writes `check` events (one per new
+# trigger, {step, instructor, result: "trigger", trigger, domain?}) and reads `outcome` events (written by
+# `teachermodel import-outcomes`, not by a step), so those are declared too.
+#
+# quality-review (auto, per instructor, refreshed on every run, so it follows each import and each month) runs
+# rules.quality_triggers over the outcomes and observations on record and writes one trigger `check` event per NEW trigger,
+# with an id derived from (instructor, reason, the delivery or observation that completed the trigger): a re-run adds nothing.
+# It waits for the instructor's notice (notice-sent) and their jurisdiction's approved variant, as the W1 steps do: outcome
+# data about an instructor is not read before the notice that says it is held (spec v0.2 Privacy, lawful basis and notice).
+# A delivery below rules.quality.min_learners_for_metric neither shows (generated/quality/<slug>.json holds null and
+# "insufficient data") nor counts toward a trigger. The step never opens a bench: a trigger intensifies coaching (W7, which
+# reads the check events) and is counted by W10; an outcome alone never causes a bench decision (spec v0.2 Privacy, fair reading
+# of outcomes).
+schema_version: 1
+id: tm:standards/workflows-quality
+status: draft
+workflows:
+  - id: tm:workflow/quality
+    name: W8 Quality review
+    basis: "instructor-development-spec-v0.2 W8 Quality review and Rules (minimum learners for a metric, quality trigger, feedback trigger); Privacy (fair reading of outcomes, learner data); increment-3 plan section H"
+    event_kinds: [step, check, outcome]
+    steps:
+      - id: tm:step/quality-review
+        name: Outcome summaries compared with the cohort baseline, triggers recorded
+        type: auto
+        role: head-of-training
+        subject: instructor
+        needs: [tm:step/roster-import, tm:step/notice-sent, tm:step/variant-approved]
+        done_when: {kind: step, match: {step: tm:step/quality-review}}
+        basis: "instructor-development-spec-v0.2 W8 (after each delivery and monthly, outcome summaries are compared with the cohort baseline per instructor; a breach opens triggered coaching, never a bench decision on its own); rules.quality_triggers"

@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/settings@1",
+  "title": "Deployment settings (private store, settings.yaml)",
+  "description": "Functional addresses and names the setup steps need. Lives in the private store next to the people list (decision 0006); holds no instructor data.",
+  "type": "object",
+  "required": [
+    "schema",
+    "library",
+    "mailbox",
+    "it_email",
+    "dpo_email",
+    "notice_version"
+  ],
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "dev_autosign": {
+            "const": true
+          }
+        },
+        "required": [
+          "dev_autosign"
+        ]
+      },
+      "then": {
+        "required": [
+          "pilot"
+        ],
+        "properties": {
+          "pilot": {
+            "const": true
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "simulated": {
+            "const": true
+          }
+        },
+        "required": [
+          "simulated"
+        ]
+      },
+      "then": {
+        "required": [
+          "pilot"
+        ],
+        "properties": {
+          "pilot": {
+            "const": true
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "schema": {
+      "const": "tm:contract/settings@1"
+    },
+    "library": {
+      "type": "string",
+      "minLength": 1,
+      "description": "SharePoint document library that holds the private store (decision 0006)"
+    },
+    "mailbox": {
+      "$ref": "#/$defs/email",
+      "description": "Mailbox that receives returned sign-offs"
+    },
+    "it_email": {
+      "$ref": "#/$defs/email",
+      "description": "Where the IT request goes"
+    },
+    "dpo_email": {
+      "$ref": "#/$defs/email",
+      "description": "Data protection contact named in the ROPA entry and the notice"
+    },
+    "notice_version": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+      "description": "Privacy notice version; used in file names and the [tm-notice <version>] tag"
+    },
+    "pilot": {
+      "type": "boolean",
+      "description": "Optional, additive within major 1 (decision 0016). True marks a pilot store that holds artificially generated data only: roster import refuses any instructor whose email is not on a reserved domain. A store in a personal OneDrive folder must set it."
+    },
+    "dev_autosign": {
+      "type": "boolean",
+      "description": "Optional, additive within major 1 (owner, 2026-10-27). True makes `teachermodel daily` run `dev-autosign` (generated sign-offs, for development) instead of a plain tick. Allowed only in a pilot store: it requires pilot: true."
+    },
+    "simulated": {
+      "type": "boolean",
+      "description": "Optional, additive within major 1 (decision 0020). True marks a store written by `teachermodel dev-simulate`: everyone in it is generated, and its notice text renders although the templates still carry draft markers, with a SIMULATED DATA first line. Allowed only in a pilot store: it requires pilot: true."
+    }
+  },
+  "$defs": {
+    "email": {
+      "type": "string",
+      "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/queue@1",
+  "title": "Work queue: the open workflow steps, as the hub console and portfolio inbox read them",
+  "description": "Hub candidate. Written by `teachermodel next --json`. Holds tm: URIs, step ids, role slugs and dates, never a name or an email. `page` is the sign-off page template for a human step (the generated pages themselves stay in the private store), null otherwise. `due` is null when the step has no due date.",
+  "type": "object",
+  "required": ["schema", "generated_at", "items"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/queue@1"},
+    "generated_at": {"type": "string", "minLength": 10},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "workflow", "subject", "role", "type", "due", "overdue", "page"],
+        "additionalProperties": false,
+        "properties": {
+          "step": {"type": "string", "pattern": "^tm:step/[a-z0-9-]+$"},
+          "workflow": {"type": "string", "pattern": "^tm:workflow/[a-z0-9-]+$"},
+          "subject": {"type": "string", "pattern": "^(tm|sl):[a-z-]+/"},
+          "role": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+          "type": {"enum": ["auto", "verify", "human"]},
+          "due": {"anyOf": [{"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"}, {"type": "null"}]},
+          "overdue": {"type": "boolean"},
+          "page": {"anyOf": [{"type": "string", "pattern": "^[a-z][a-z_]*$"}, {"type": "null"}]}
+        }
+      }
+    }
+  }
+}

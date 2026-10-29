@@ -1,0 +1,109 @@
+# W4 Clearance workflow (tm:contract/workflows@1). Increment 2 plan, section D; spec v0.2 W4 and Rules (clearance minimum,
+# coach as observer, clearance expiry, conditional clearance); decision 0012 (signers, the people-to-instructor mapping).
+# Event kinds in done_when: step (the auto steps, and the system skip of head-resolves) and signoff (the human steps). The
+# workflow also writes `check` events (evidence not ready) and `clearance` events (issue, and a lapse), declared too.
+#
+# Per candidate (instructor x unit x mode, opened by the pathway workflow):
+#   evidence-ready  runs rules.clearance_check over records.observations (only those scored against the current framework
+#                   major), records.dry_runs (counted only while the unit's environment hash holds) and
+#                   records.calibrations. When the evidence meets the minimum it writes a `step` event that opens a ROUND:
+#                   the verdict detail (averages, observers, observation ids, passed dry runs) and the hash of that evidence
+#                   (which covers the dry runs and the unit's environment hash, so a voided dry run and its replacement
+#                   change it). Otherwise a blocked `check` with the rule's reasons. It refreshes on every run and opens a
+#                   new round when: the evidence of an undecided round changed (a new observation reopens the decisions not
+#                   yet issued); the round was decided not_yet (or lapsed, expired, revoked) and the evidence changed since;
+#                   a conditional clearance is in force and the evidence changed (the recheck); or a clearance in force is
+#                   within rules.staffing.warn_expiry_days of its expiry (the renewal). A renewal round counts only
+#                   observations dated after the renewed clearance was issued (`since`): it rests on new evidence.
+#   clearer-decision-1, clearer-decision-2
+#                   two different clearers (compared through the people mapping), each calibrated (rules.is_calibrated) on
+#                   the decision date (the sign-off's signed_at, which may not precede the day the round opened), each
+#                   holding a valid clearance for the unit in some mode (a clearer decides within their modules: spec
+#                   Users and roles; in a FOUNDING round, while fewer than two calibrated clearers other than the instructor
+#                   hold the unit, any calibrated clearer not under a blocking bench decision may decide, and the clearance
+#                   carries founding: true: decision 0017), neither the instructor (nor a person mapped to the instructor), and not both the
+#                   instructor's coaches: the spec limits a coach to one of the two OBSERVERS; the same limit on the two
+#                   clearers is an OPERATIONAL DEFAULT (decision 0002), not an evidence-based rule. Decision 2 opens after decision 1 and its page goes to the other
+#                   clearers; it carries decision 1's signer, never its outcome. Both pages are bound to the round
+#                   (`bind: input`), so a new round reopens both. The content checks (flows/clearance.py) refuse a sign-off
+#                   that breaks any of this, and one whose outcome lacks what it needs: conditions and a recheck date for
+#                   cleared_with_conditions, actions for not_yet.
+#   head-resolves   the head of training (a person holding the role who is not the instructor) decides when
+#                   the two outcomes differ; when they agree, the hook of decision 2 writes the system `step` event marked
+#                   skipped that closes it for those inputs.
+#   issue           re-checks the round's evidence (when it no longer meets the minimum it writes a blocked `check` and
+#                   nothing else) and writes the `clearance` event (clearance@1): the final outcome, the conditions as keys into the private
+#                   store (the text stays in clearances/<id>.json), the recheck date, both clearers, the observation ids of
+#                   the round, issued (the day of the last decision), expires (rules.expiry_date) and the framework
+#                   version. Its id derives from the round, so a replay appends nothing.
+#   recheck-lapse   a cleared_with_conditions clearance whose recheck date passed without a later clearance is superseded
+#                   by a `clearance` event of the same id with outcome not_yet (spec Rules, Conditional clearance).
+#
+# Due: decision 1 and 2 by rule clearance_expiry (a renewal round: the expiry date of the clearance it renews; a round after
+# a conditional clearance: its recheck date; any other round: DECISION_DAYS after it opened, an operational default);
+# recheck-lapse by rule conditional_recheck (the recheck date). head-resolves {days: 7} is an operational default
+# (decision 0002), not an evidence-based threshold.
+schema_version: 1
+id: tm:standards/workflows-clearance
+status: draft
+workflows:
+  - id: tm:workflow/clearance
+    name: W4 Clearance decision
+    basis: "instructor-development-spec-v0.2 W4 Clearance decision and Rules (clearance minimum, coach as observer, clearance expiry, conditional clearance); increment-2 plan section D; decision 0012"
+    event_kinds: [step, signoff, check, clearance]
+    steps:
+      - id: tm:step/evidence-ready
+        name: Clearance evidence meets the minimum
+        type: auto
+        role: head-of-training
+        subject: candidate
+        needs: []
+        done_when: {kind: step, match: {step: tm:step/evidence-ready}}
+        basis: "instructor-development-spec-v0.2 W4 step 1; rules.clearance_check (clearance minimum, short observations, coach as observer, dry-run validity)"
+      - id: tm:step/clearer-decision-1
+        name: Clearance decision by the first clearer
+        type: human
+        role: clearer
+        subject: candidate
+        needs: [tm:step/evidence-ready]
+        done_when: {kind: signoff, match: {step: tm:step/clearer-decision-1}, bind: input}
+        due: clearance_expiry
+        page: approve
+        basis: "instructor-development-spec-v0.2 W4 step 2 (both clearers record the decision); Users and roles (a clearer joins a second clearer); decision 0017 (founding round)"
+      - id: tm:step/clearer-decision-2
+        name: Clearance decision by the second clearer
+        type: human
+        role: clearer
+        subject: candidate
+        needs: [tm:step/clearer-decision-1]
+        done_when: {kind: signoff, match: {step: tm:step/clearer-decision-2}, bind: input}
+        due: clearance_expiry
+        page: approve
+        basis: "instructor-development-spec-v0.2 W4 step 2; Domain model (clearers (2)); Users and roles (a clearer decides within their modules); the coach limit applied to the clearers is an operational default (decision 0002), the spec's rule is on observers; decision 0017 (founding round)"
+      - id: tm:step/head-resolves
+        name: Disagreement resolved by the head of training
+        type: human
+        role: head-of-training
+        subject: candidate
+        needs: [tm:step/clearer-decision-2]
+        done_when: {kind: signoff, match: {step: tm:step/head-resolves}, bind: input, skippable: true}
+        due: {days: 7, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W4 step 2 (disagreement goes to the head of training)"
+      - id: tm:step/issue
+        name: Clearance issued
+        type: auto
+        role: head-of-training
+        subject: candidate
+        needs: [tm:step/head-resolves]
+        done_when: {kind: step, match: {step: tm:step/issue}}
+        basis: "instructor-development-spec-v0.2 W4 step 3 (expiry is set; the clearance appears in the staffing check); clearance@1; rules.expiry_date"
+      - id: tm:step/recheck-lapse
+        name: Missed recheck lapses a conditional clearance to not yet
+        type: auto
+        role: head-of-training
+        subject: candidate
+        needs: [tm:step/issue]
+        done_when: {kind: step, match: {step: tm:step/recheck-lapse}}
+        due: conditional_recheck
+        basis: "instructor-development-spec-v0.2 Rules (conditional clearance lapses to not yet if the recheck is missed)"

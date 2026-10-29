@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/roster@1",
+  "title": "Roster import: active instructors by type, with engagement and current deliveries",
+  "description": "A roster file holds personal data (the identity block), so live rosters live only in the private store (decision 0006). The importer splits each row: identity goes to identities/roster.yaml, everything else is referenced by the tm:instructor URI.",
+  "type": "object",
+  "required": ["schema", "as_of", "source", "instructors"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/roster@1"},
+    "as_of": {"$ref": "#/$defs/date", "description": "Date the roster was true"},
+    "source": {"type": "string", "minLength": 1, "description": "Where it came from, e.g. 'HR export' or 'partner lead nomination list'"},
+    "prepared_by": {"$ref": "#/$defs/person"},
+    "instructors": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/instructor"}}
+  },
+  "$defs": {
+    "person": {"type": "string", "pattern": "^tm:person/[a-z0-9][a-z0-9-]*$"},
+    "date": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "jurisdiction": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}(-[A-Z0-9]{1,3})?$",
+      "description": "ISO 3166-1 alpha-2, optionally with an ISO 3166-2 subdivision (US-CA)"
+    },
+    "instructor": {
+      "type": "object",
+      "required": ["instructor", "identity", "type", "organisation", "level", "languages", "regions", "jurisdiction", "notice", "engagement"],
+      "additionalProperties": false,
+      "properties": {
+        "instructor": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$", "description": "Stable, meaningless id; never derived from the name"},
+        "identity": {
+          "type": "object",
+          "description": "Personal data. Private store only; never copied into events or git.",
+          "required": ["name", "email"],
+          "additionalProperties": false,
+          "properties": {
+            "name": {"type": "string", "minLength": 1},
+            "email": {"type": "string", "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"},
+            "hr_ref": {"type": "string", "description": "Employee or supplier number, when one exists"}
+          }
+        },
+        "type": {"enum": ["sme-engineer", "professional", "contractor", "partner"]},
+        "organisation": {"type": "string", "pattern": "^tm:org/[a-z0-9][a-z0-9-]*$"},
+        "level": {"type": "string", "description": "Baseline level from framework.levels. Set once at first import; later changes need a level_change event."},
+        "languages": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "pattern": "^[a-z]{2,3}(-[A-Z]{2})?$"}, "description": "BCP 47 tags the instructor teaches in"},
+        "regions": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/jurisdiction"}, "description": "Where the instructor may be staffed"},
+        "jurisdiction": {"$ref": "#/$defs/jurisdiction", "description": "Where the instructor works; sets the privacy law and notice"},
+        "notice": {
+          "type": "object",
+          "description": "Privacy notice given at or before collection (spec, Lawful basis)",
+          "required": ["version", "given_on"],
+          "additionalProperties": false,
+          "properties": {"version": {"type": "string", "minLength": 1}, "given_on": {"$ref": "#/$defs/date"}}
+        },
+        "engagement": {
+          "type": "object",
+          "required": ["start", "status"],
+          "additionalProperties": false,
+          "properties": {
+            "start": {"$ref": "#/$defs/date"},
+            "end": {"$ref": "#/$defs/date"},
+            "status": {"enum": ["active", "paused", "ended"]},
+            "manager": {"$ref": "#/$defs/person", "description": "Engineering manager who commits teaching time (SME engineers)"},
+            "protected_hours_per_month": {"type": "number", "exclusiveMinimum": 0},
+            "nominated_by": {"$ref": "#/$defs/person", "description": "Partner lead who nominated the instructor"},
+            "agreement_ref": {"type": "string", "description": "Private-store key of the contract or time agreement, not the document"}
+          }
+        },
+        "delivers": {
+          "type": "array",
+          "description": "Modules the instructor delivers today. Feeds the phase 1 gap list: a delivery with no clearance is a gap.",
+          "items": {
+            "type": "object",
+            "required": ["module", "modes"],
+            "additionalProperties": false,
+            "properties": {
+              "module": {"type": "string", "pattern": "^(tm|sl):module/"},
+              "modes": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["in-person", "remote", "hybrid"]}},
+              "last_delivered": {"$ref": "#/$defs/date"}
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {"required": ["type"], "properties": {"type": {"const": "sme-engineer"}}},
+          "then": {"properties": {"engagement": {"required": ["manager", "protected_hours_per_month"]}}}
+        },
+        {
+          "if": {"required": ["type"], "properties": {"type": {"const": "partner"}}},
+          "then": {"properties": {"engagement": {"required": ["nominated_by"]}}}
+        },
+        {
+          "if": {"required": ["engagement"], "properties": {"engagement": {"required": ["status"], "properties": {"status": {"const": "ended"}}}}},
+          "then": {"properties": {"engagement": {"required": ["end"]}}}
+        }
+      ]
+    }
+  }
+}

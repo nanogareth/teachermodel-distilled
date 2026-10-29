@@ -1,0 +1,33 @@
+# W3 Dry-run workflow (tm:contract/workflows@1). Spec: instructor-development-spec-v0.2 W3; protocol: standards/dry-run-protocol.md;
+# increment-2 plan "C. W3 dry-run".
+# `dry-run` is a human step on a candidate subject (one instructor x unit x mode, opened by the pathway workflow). Any
+# clearer signs it except the candidate's own instructor (the page is built for the other clearers, and the sign-off hook in
+# flows/dry_run.py refuses the instructor's own sign-off). A clearer is a people-list person holding the clearer role who is
+# mapped (`instructor`) to an instructor at level clearer who is calibrated on the day; the role alone is not enough, and the
+# hook checks the signing day again (decision 0012 as amended). Its page is built from the unit file (standards/units): preflight
+# items, a run-sheet walk, one failure from the unit's failure_catalogue chosen and handled, and the fallback exercised.
+# `bind: input`: the page inputs carry the unit's environment_sha256, so a change to the unit's environment, failure
+# catalogue or run sheet reopens the step and (records.dry_runs) stops the earlier run counting. A signed run that did not pass
+# also reopens it. Events: the step completes on a `signoff`; the hook adds a `dry_run` event (dry-run@1) and, for a refused
+# sign-off, a `check` event.
+# due {days}: how long a candidate may wait for a dry run, counted from the day the candidate was opened. An operational default
+# (decision 0002), not an evidence-based threshold.
+schema_version: 1
+id: tm:standards/workflows-dry-run
+status: draft
+workflows:
+  - id: tm:workflow/dry-run
+    name: W3 Dry-run
+    basis: "instructor-development-spec-v0.2 W3 Dry-run; standards/dry-run-protocol.md; increment-2 plan C; decision 0011 (candidate subjects)"
+    event_kinds: [signoff, dry_run, check]
+    steps:
+      - id: tm:step/dry-run
+        name: Dry run of the unit and mode
+        type: human
+        role: clearer
+        subject: candidate
+        needs: []
+        done_when: {kind: signoff, match: {step: tm:step/dry-run}, bind: input}
+        due: {days: 30, basis: operational default}
+        page: approve
+        basis: "instructor-development-spec-v0.2 W3 steps 1-5; dry-run protocol (validity: until the module's environment, model version or run sheet changes)"

@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>teachermodel tour</title>
+<style>
+  :root {
+    --navy: #12193E; --ink: #262838; --indigo: #434D9E; --teal: #10CBC8; --purple: #863F96;
+    --mustard: #DABB00; --salmon: #FCA596;
+    --bg: #F4F5FA; --panel: #FFFFFF; --line: #DDE0EC; --muted: #5E6378;
+    --ok: #1C8A4C; --warn: #8A6D00; --warn-bg: #FFF4C2; --block: #B3261E; --block-bg: #FDE7E5; --ok-bg: #E2F4EA;
+    --term-bg: #12193E; --term-ink: #E8EAF6;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; color: var(--ink); background: var(--bg); display: flex;
+         flex-direction: column; overflow: hidden; }
+  button, select { font: inherit; }
+
+  header { background: var(--navy); color: #fff; display: flex; align-items: center; gap: 16px; padding: 10px 18px;
+           flex: none; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 700; letter-spacing: .2px; white-space: nowrap; }
+  header h1 span { color: var(--teal); }
+  .spacer { flex: 1; }
+  .counter { font-variant-numeric: tabular-nums; color: #C9CCE4; white-space: nowrap; }
+  header select, header button { background: #1E2756; color: #fff; border: 1px solid #39437A; border-radius: 6px;
+                                 padding: 6px 10px; cursor: pointer; }
+  header button:hover, header select:hover { border-color: var(--teal); }
+  header button[aria-pressed="true"] { background: var(--indigo); border-color: var(--teal); }
+  .nav button { min-width: 40px; }
+
+  main { flex: 1; display: grid; grid-template-columns: 250px 420px 1fr; min-height: 0; }
+  body.focus main { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+  body.focus #viewer { grid-column: 1; }
+  body.focus #rail, body.focus #stage { display: none; }
+
+  #rail { border-right: 1px solid var(--line); background: var(--panel); overflow-y: auto; padding: 8px 0; }
+  #rail ol { list-style: none; margin: 0; padding: 0; }
+  #rail li button { display: flex; gap: 10px; width: 100%; text-align: left; background: none; border: 0;
+                    padding: 9px 14px; cursor: pointer; color: var(--ink); line-height: 1.3; border-left: 4px solid transparent; }
+  #rail li button:hover { background: #EEF0F8; }
+  #rail li button[aria-current="step"] { background: #E8EAF7; border-left-color: var(--indigo); font-weight: 700; }
+  #rail .num { color: var(--indigo); font-variant-numeric: tabular-nums; min-width: 20px; font-weight: 700; }
+
+  #stage { border-right: 1px solid var(--line); overflow-y: auto; padding: 20px 22px 28px; background: var(--panel); }
+  #stage .eyebrow { color: var(--indigo); font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: .6px; }
+  #stage h2 { font-size: 24px; line-height: 1.25; margin: 6px 0 10px; color: var(--navy); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 18px; }
+  .chip { font-size: 12px; padding: 3px 9px; border-radius: 999px; background: #E6F9F9; color: #0B6E6C; border: 1px solid #B6ECEB; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); margin: 18px 0 8px; }
+  #say { margin: 0; padding-left: 20px; font-size: 16px; line-height: 1.5; }
+  #say li { margin-bottom: 9px; }
+  body.no-notes #notes { display: none; }
+
+  #items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  #items button { width: 100%; text-align: left; display: flex; align-items: center; gap: 10px; padding: 9px 11px;
+                  border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; color: var(--ink); }
+  #items button:hover { border-color: var(--indigo); }
+  #items button[aria-current="true"] { border-color: var(--indigo); box-shadow: 0 0 0 2px rgba(67,77,158,.18); }
+  .kind { flex: none; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 4px; background: #ECEEF7; color: var(--indigo); }
+  .label { flex: 1; font-family: Consolas, "Courier New", monospace; font-size: 13px; word-break: break-all; }
+  .state { flex: none; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .state.ok { background: var(--ok-bg); color: var(--ok); }
+  .state.warn { background: var(--warn-bg); color: var(--warn); }
+  .state.block, .state.bad { background: var(--block-bg); color: var(--block); }
+  .state.running { background: #ECEEF7; color: var(--muted); }
+
+  #viewer { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  #viewbar { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid var(--line);
+             background: var(--panel); min-height: 44px; }
+  #viewbar .what { font-family: Consolas, "Courier New", monospace; font-size: 13px; color: var(--muted);
+                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  #viewbar .title { font-weight: 700; color: var(--navy); white-space: nowrap; display: none; }
+  body.focus #viewbar .title { display: block; }
+  #viewbar a, #viewbar button { color: var(--indigo); background: none; border: 1px solid var(--line); border-radius: 6px;
+                                padding: 4px 10px; cursor: pointer; text-decoration: none; font-size: 13px; white-space: nowrap; }
+  #frame { flex: 1; border: 0; width: 100%; background: #fff; }
+  #term { flex: 1; overflow: auto; background: var(--term-bg); color: var(--term-ink); margin: 0; padding: 22px 26px;
+          font-family: Consolas, "Courier New", monospace; font-size: 15px; line-height: 1.5; white-space: pre-wrap; }
+  #term .cmd { color: var(--teal); display: block; margin-bottom: 14px; }
+  #term .mismatch { color: var(--salmon); display: block; margin-top: 14px; }
+  #term .gate { font-weight: 700; }
+  #term .gate.met { color: #6EE7A8; }
+  #term .gate.unmet, #term .gate.not-built { color: var(--salmon); }
+  #term .gate.attested { color: var(--mustard); }
+  .verdict { display: inline-block; font-family: Arial, sans-serif; font-weight: 700; font-size: 20px; letter-spacing: 1px;
+             padding: 6px 16px; border-radius: 8px; margin-bottom: 16px; }
+  .verdict.ok { background: var(--ok-bg); color: var(--ok); }
+  .verdict.warn { background: var(--warn-bg); color: var(--warn); }
+  .verdict.block { background: var(--block-bg); color: var(--block); }
+  #empty { flex: 1; display: grid; place-items: center; color: var(--muted); padding: 24px; text-align: center; }
+  .hidden { display: none !important; }
+
+  footer { flex: none; font-size: 12px; color: var(--muted); padding: 6px 18px; border-top: 1px solid var(--line);
+           background: var(--panel); display: flex; gap: 18px; flex-wrap: wrap; }
+  kbd { font-family: Consolas, monospace; background: #ECEEF7; border-radius: 3px; padding: 0 4px; color: var(--ink); }
+
+  @media (max-width: 1100px) {
+    main { grid-template-columns: 200px 1fr; grid-template-rows: auto 1fr; }
+    #rail { grid-row: 1 / 3; }
+    #stage { border-right: 0; border-bottom: 1px solid var(--line); max-height: 45vh; }
+    #viewer { grid-column: 2; }
+  }
+  @media (max-width: 700px) {
+    body { overflow: auto; }
+    header { flex-wrap: wrap; padding: 10px 16px; }
+    main { display: flex; flex-direction: column; }
+    #rail { max-height: 30vh; border-right: 0; border-bottom: 1px solid var(--line); }
+    #stage { max-height: none; padding: 16px; }
+    #viewer { min-height: 70vh; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>teachermodel <span>tour</span></h1>
+  <div class="spacer"></div>
+  <label for="audience" class="hidden">Audience</label>
+  <select id="audience" title="Show only the stops for one audience"></select>
+  <button id="notesBtn" aria-pressed="true" title="Show or hide what to say (N)">Notes</button>
+  <button id="focusBtn" aria-pressed="false" title="Show only the viewer, for the audience (F)">Present</button>
+  <span class="counter" id="counter"></span>
+  <span class="nav"><button id="prev" title="Previous stop (Left arrow)" aria-label="Previous stop">&larr;</button>
+  <button id="next" title="Next stop (Right arrow)" aria-label="Next stop">&rarr;</button></span>
+</header>
+<main>
+  <nav id="rail" aria-label="Stops"><ol id="stops"></ol></nav>
+  <section id="stage" aria-live="polite">
+    <div class="eyebrow" id="eyebrow"></div>
+    <h2 id="title"></h2>
+    <div class="chips" id="chips"></div>
+    <div id="notes"><h3>What to say</h3><ul id="say"></ul></div>
+    <h3>Show</h3>
+    <ol id="items"></ol>
+  </section>
+  <section id="viewer">
+    <div id="viewbar">
+      <span class="title" id="focusTitle"></span>
+      <span class="what" id="what"></span>
+      <button id="rerun" class="hidden" title="Run this command again (R)">Run again</button>
+      <a id="newtab" class="hidden" target="_blank" rel="noopener">Open in a new tab</a>
+    </div>
+    <iframe id="frame" class="hidden" title="Tour page"></iframe>
+    <pre id="term" class="hidden"></pre>
+    <div id="empty">Loading the tour&hellip;</div>
+  </section>
+</main>
+<footer>
+  <span id="store"></span>
+  <span><kbd>&larr;</kbd> <kbd>&rarr;</kbd> stops</span>
+  <span><kbd>&uarr;</kbd> <kbd>&darr;</kbd> items</span>
+  <span><kbd>R</kbd> run again</span>
+  <span><kbd>N</kbd> notes</span>
+  <span><kbd>F</kbd> present</span>
+</footer>
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+const tour = { stops: [], audiences: {}, list: [], pos: 0, item: 0, results: {} };
+const store = {
+  get(k) { try { return localStorage.getItem("tm-tour-" + k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem("tm-tour-" + k, v); } catch (e) { /* private window */ } },
+};
+
+function el(tag, attrs, ...kids) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === "class") node.className = v; else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v);
+  }
+  for (const kid of kids) node.append(kid);
+  return node;
+}
+
+function key(stop, index) { return stop + ":" + index; }
+
+function filterStops() {
+  const who = $("audience").value;
+  tour.list = tour.stops.filter((s) => !who || s.audiences.includes(who));
+}
+
+function renderRail() {
+  const ol = $("stops");
+  ol.replaceChildren(...tour.list.map((s, i) => el("li", {},
+    el("button", { onclick: () => go(i), "aria-current": i === tour.pos ? "step" : "false" },
+      el("span", { class: "num" }, String(s.n)), el("span", {}, s.title)))));
+}
+
+function stateOf(stop, item) {
+  if (item.kind === "open") return item.path ? null : { cls: "bad", text: "missing" };
+  const r = tour.results[key(stop.n, item.index)];
+  if (!r) return null;
+  if (r.running) return { cls: "running", text: "running" };
+  if (r.error) return { cls: "bad", text: "error" };
+  if (!r.ok) return { cls: "bad", text: "exit " + r.exit };
+  if (r.verdict) return { cls: r.verdict, text: r.verdict };
+  return { cls: "ok", text: "exit " + r.exit };
+}
+
+function renderItems() {
+  const stop = tour.list[tour.pos];
+  $("items").replaceChildren(...stop.show.map((item, i) => {
+    const st = stateOf(stop, item);
+    const label = item.kind === "run" ? item.command : (item.path || item.glob);
+    return el("li", {}, el("button", { onclick: () => select(i), "aria-current": i === tour.item ? "true" : "false" },
+      el("span", { class: "kind" }, item.kind === "run" ? "RUN" : "VIEW"),
+      el("span", { class: "label" }, label),
+      st ? el("span", { class: "state " + st.cls }, st.text) : ""));
+  }));
+}
+
+function renderStage() {
+  const stop = tour.list[tour.pos];
+  $("eyebrow").textContent = "Stop " + stop.n + " of " + tour.stops.length;
+  $("title").textContent = stop.title;
+  $("focusTitle").textContent = stop.n + ". " + stop.title;
+  $("chips").replaceChildren(...stop.audiences.map((a) => el("span", { class: "chip" }, tour.audiences[a] || a)));
+  $("say").replaceChildren(...stop.say.map((p) => el("li", {}, p)));
+  $("counter").textContent = (tour.pos + 1) + " / " + tour.list.length;
+  $("prev").disabled = tour.pos === 0;
+  $("next").disabled = tour.pos === tour.list.length - 1;
+  renderItems();
+}
+
+function show(which) {
+  for (const id of ["frame", "term", "empty"]) $(id).classList.toggle("hidden", id !== which);
+}
+
+function renderViewer() {
+  const stop = tour.list[tour.pos];
+  const item = stop.show[tour.item];
+  $("rerun").classList.toggle("hidden", !item || item.kind !== "run");
+  $("newtab").classList.add("hidden");
+  if (!item) { $("what").textContent = ""; $("empty").textContent = "Nothing to show at this stop."; return show("empty"); }
+  if (item.kind === "open") {
+    if (!item.path) {
+      $("what").textContent = item.glob;
+      $("empty").textContent = "The tour store has no page matching " + item.glob + ". Rebuild it: py scripts/tour.py --prepare";
+      return show("empty");
+    }
+    const src = "/store/" + item.path.split("/").map(encodeURIComponent).join("/");
+    $("what").textContent = item.path;
+    $("newtab").href = src;
+    $("newtab").classList.remove("hidden");
+    if ($("frame").getAttribute("src") !== src) $("frame").setAttribute("src", src);
+    return show("frame");
+  }
+  $("what").textContent = item.command;
+  const r = tour.results[key(stop.n, item.index)];
+  const term = $("term");
+  term.replaceChildren(el("span", { class: "cmd" }, "> " + item.command));
+  if (!r || r.running) term.append("Running…");
+  else if (r.error) term.append(el("span", { class: "mismatch" }, r.error));
+  else {
+    if (r.verdict) term.append(el("span", { class: "verdict " + r.verdict }, r.verdict.toUpperCase()), "\n");
+    for (const line of (r.output || "(no output)").split("\n")) {
+      const m = /^(MET|UNMET|ATTESTED|NOT BUILT)(\s+)/.exec(line);
+      if (m) term.append(el("span", { class: "gate " + m[1].replace(" ", "-").toLowerCase() }, m[1]), line.slice(m[1].length));
+      else term.append(line);
+      term.append("\n");
+    }
+    if (!r.ok) term.append(el("span", { class: "mismatch" },
+      "exit " + r.exit + ", the tour expects " + r.expect + ": the store may have changed. Check it: py scripts/tour.py --check"));
+  }
+  show("term");
+}
+
+async function run(stop, item) {
+  const k = key(stop.n, item.index);
+  tour.results[k] = { running: true };
+  refresh();
+  try {
+    const res = await fetch("/api/run", { method: "POST", headers: { "Content-Type": "application/json" },
+                                          body: JSON.stringify({ stop: stop.n, index: item.index }) });
+    const body = await res.json();
+    tour.results[k] = res.ok ? body : { error: body.error || ("HTTP " + res.status) };
+  } catch (e) {
+    tour.results[k] = { error: "The tour server stopped. Start it again: py scripts/tour.py --gui" };
+  }
+  refresh();
+}
+
+function refresh() { renderItems(); renderViewer(); }
+
+async function runStop(stop) {
+  for (const item of stop.show) if (item.kind === "run" && !tour.results[key(stop.n, item.index)]) await run(stop, item);
+}
+
+function select(i) {
+  const stop = tour.list[tour.pos];
+  if (i < 0 || i >= stop.show.length) return;
+  tour.item = i;
+  refresh();
+}
+
+function go(pos) {
+  if (pos < 0 || pos >= tour.list.length) return;
+  tour.pos = pos;
+  tour.item = 0;
+  store.set("stop", String(tour.list[pos].n));
+  renderRail();
+  renderStage();
+  renderViewer();
+  $("stage").scrollTop = 0;
+  runStop(tour.list[pos]);
+}
+
+function toggle(cls, btn) {
+  const on = document.body.classList.toggle(cls);
+  const pressed = cls === "no-notes" ? !on : on;
+  $(btn).setAttribute("aria-pressed", String(pressed));
+  store.set(cls, on ? "1" : "");
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "SELECT" || e.ctrlKey || e.metaKey || e.altKey) return;
+  const stop = tour.list[tour.pos];
+  if (!stop) return;
+  if (e.key === "ArrowRight" || e.key === "PageDown") { go(tour.pos + 1); e.preventDefault(); }
+  else if (e.key === "ArrowLeft" || e.key === "PageUp") { go(tour.pos - 1); e.preventDefault(); }
+  else if (e.key === "ArrowDown") { select(tour.item + 1); e.preventDefault(); }
+  else if (e.key === "ArrowUp") { select(tour.item - 1); e.preventDefault(); }
+  else if (e.key === "r" || e.key === "R") { const it = stop.show[tour.item]; if (it && it.kind === "run") run(stop, it); }
+  else if (e.key === "n" || e.key === "N") toggle("no-notes", "notesBtn");
+  else if (e.key === "f" || e.key === "F") toggle("focus", "focusBtn");
+});
+
+$("prev").addEventListener("click", () => go(tour.pos - 1));
+$("next").addEventListener("click", () => go(tour.pos + 1));
+$("notesBtn").addEventListener("click", () => toggle("no-notes", "notesBtn"));
+$("focusBtn").addEventListener("click", () => toggle("focus", "focusBtn"));
+$("rerun").addEventListener("click", () => { const s = tour.list[tour.pos]; run(s, s.show[tour.item]); });
+$("audience").addEventListener("change", () => {
+  const current = tour.list[tour.pos];
+  store.set("audience", $("audience").value);
+  filterStops();
+  const keep = tour.list.findIndex((s) => current && s.n === current.n);
+  tour.pos = -1;
+  go(keep >= 0 ? keep : 0);
+});
+
+async function start() {
+  let data;
+  try {
+    data = await (await fetch("/api/stops")).json();
+  } catch (e) {
+    $("empty").textContent = "The tour server is not running. Start it: py scripts/tour.py --gui";
+    return;
+  }
+  tour.stops = data.stops;
+  tour.audiences = data.audiences;
+  $("store").textContent = "Tour store: " + data.store;
+  const sel = $("audience");
+  sel.replaceChildren(el("option", { value: "" }, "All audiences"),
+    ...Object.entries(data.audiences).map(([k, v]) => el("option", { value: k }, v)));
+  sel.value = data.audience || store.get("audience") || "";
+  if (store.get("no-notes")) toggle("no-notes", "notesBtn");
+  filterStops();
+  const saved = Number(store.get("stop"));
+  const at = tour.list.findIndex((s) => s.n === saved);
+  go(at >= 0 ? at : 0);
+}
+start();
+</script>
+</body>
+</html>

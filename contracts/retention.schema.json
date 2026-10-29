@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/retention@2",
+  "title": "Retention per data category and purpose (standards/privacy/retention.yaml)",
+  "description": "One entry per data category and purpose (and, where an overlay differs, per jurisdiction): how long it is kept, the event that starts the clock, why that long in plain language, and the legal basis. Periods are set with legal advice (spec, Privacy: Retention). No entries means nothing is set yet: the notice refuses to render and no approval page is built. Replaces retention@1, whose fixed list of five nullable periods is kept in contracts/v1/ (decision 0010).",
+  "type": "object",
+  "required": ["schema_version", "status", "basis", "entries"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 2},
+    "status": {"enum": ["draft", "approved"]},
+    "basis": {"type": "string", "minLength": 1},
+    "entries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "purpose", "starts", "reason", "basis"],
+        "additionalProperties": false,
+        "oneOf": [{"required": ["period_months"]}, {"required": ["until_event"]}],
+        "properties": {
+          "category": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "A data category id from setup.data_categories"},
+          "purpose": {"type": "string", "pattern": "^tm:purpose/[a-z0-9][a-z0-9-]*$"},
+          "jurisdiction": {"type": "string", "pattern": "^tm:jurisdiction/[a-z0-9-]+$", "description": "Absent for the base entry; present where an overlay needs a different rule"},
+          "period_months": {"type": "integer", "minimum": 1},
+          "until_event": {"type": "string", "minLength": 1, "description": "An event that ends retention, instead of a fixed period (e.g. deletion is requested)"},
+          "starts": {"type": "string", "minLength": 1, "description": "The event that starts the clock"},
+          "reason": {"type": "string", "minLength": 20, "description": "Why that long, in plain language, as the notice will say it"},
+          "basis": {"$ref": "#/$defs/basis"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "basis": {
+      "enum": ["consent", "contract", "legal-obligation", "vital-interests", "public-task", "legitimate-interests", "disclosed-purpose"],
+      "description": "GDPR Article 6(1) bases, plus disclosed-purpose: a CCPA business or commercial purpose disclosed at collection, used only by overlay profiles (validate refuses it in a base profile). Identical in jurisdiction, purposes and retention (a test pins the equality)"
+    }
+  }
+}
