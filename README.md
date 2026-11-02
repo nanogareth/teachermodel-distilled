@@ -14,6 +14,10 @@ on what evidence, and how instructors keep improving. Spec v0.2 (experienced-eng
 - **Plan:** `docs/plans/phase-plan.md`.
 - **Hub alignment:** `docs/hub-alignment.md` (hub conventions).
 
+I built a system to run instructor clearance in my own work, then rebuilt it here on generated data so anyone can
+inspect it. The original has been in use since 2025 with 14 instructors, in a separate private repository that shares
+no data with this one. Nothing real has run on this rebuild, by design.
+
 ## Quick start (Windows)
 
 ```powershell
