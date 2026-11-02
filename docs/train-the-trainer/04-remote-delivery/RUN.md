@@ -291,7 +291,7 @@ position 1s are the remote learners.
 - **0:07** Join and step 1. Post the join command in the chat, write it on the flipchart and read it
   aloud. *"From your lab-ttt4 folder, run this once, then run step 1 with `python checkpoint.py 1`
   and read the last line it prints."* Wait. Read the page aloud, in numbers, not colours, for example:
-  *"Room CEDAR: six devices reporting. Step 1 has passed on five, and one device is stuck on it. There are
+  *"Room CEDAR: six devices reporting. Step 1 has passed on five, and a few are working on it. There are
   six of you."* Then take the queue: *"Whoever is stuck, you are first in the queue: a hand on the
   call or a line in the chat."* Answer them in the order the queue shows, room or call.
 - **0:09** The vote. Open the poll. *"One question, and everyone answers in the poll, the room as

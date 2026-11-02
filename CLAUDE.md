@@ -17,7 +17,7 @@ teachermodel verify-events <path>  # schema, receipts, duplicate ids in an event
 teachermodel staffing-check --instructor <uri> --unit <uri> --mode <mode> --date <YYYY-MM-DD>  # exit 0 ok, 3 warn, 2 block, 1 refused
 teachermodel staffing-match --unit <uri> --mode <mode> --from <day> --to <day> [--region IE]  # who may teach, who is free, travel (0026)
 teachermodel import-schedule <file>  # a calendar export of sessions (schedule@1) kept as inputs/schedule.yaml (0027)
-teachermodel import-feed <file>    # a lab feed (release-status@1, results-received@1) kept under inputs/; daily drains inbox/ (0028)
+teachermodel import-feed <file>    # a lab feed (release-status@1, results-received@1, room-summary@1) kept under inputs/; daily drains inbox/ (0028, 0033)
 teachermodel check-roster <path>   # roster file against tm:contract/roster@1
 teachermodel revoke-page --step <id> [--subject <uri>]  # a page to revoke an approval in force (0019)
 teachermodel gates                 # phase gates and acceptance criteria computed from the store (read only)
@@ -25,6 +25,7 @@ teachermodel index                 # rebuild the disposable SQLite index (index/
 teachermodel views                 # index + read views in views/: clearance matrix, coaching logs, quality review, records
 teachermodel check-draft <file>    # a Claude button's draft, a session record or a card's command against its contract (0029)
 teachermodel claude-kit --out deploy/claude/kit [--connector name=url]  # the Claude buttons' deployment files from standards/chains.yaml (0029)
+teachermodel request new|propose|confirm|decline|withdraw|status  # a programme someone asks us to staff; views/requests/<id>.html is their page (0034)
 teachermodel history --clearance <uri>  # a clearance's full history from the log alone
 teachermodel audit-export --quarter <YYYYQn>  # a quarter's audit samples as JSON (exports/)
 teachermodel audition new|assign|score|status|result|decide|carry  # a candidate's audition on the rubric, kept apart (0025); assign draws each observer's signed page, forms return by mail with no event (0031)

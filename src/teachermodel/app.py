@@ -852,6 +852,10 @@ def do_ingest(
     if applied.auditions:
         stored, refused = audition.receive(private, applied.auditions, now, root)
         audition_lines = [*stored, *(f"rejected: {r}" for r in refused)]
+    if applied.requests:
+        from . import requests  # here, not at the top: requests imports app
+
+        audition_lines += requests.receive(private, applied.requests, now, root)
     new = [*applied.events, *hook_events]
     # A pilot receipt (pilot-sign, decision 0016) did not read the real sign-off mailbox, so it must not move the
     # start of the connector's next search past real sign-offs it has not seen.

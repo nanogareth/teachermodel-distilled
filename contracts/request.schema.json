@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/request@1",
+  "title": "A programme request's stage (payload of a `request` event)",
+  "description": "One event per stage of a programme request (decision 0034). The first holds what was asked; the requester's mailbox and words stay in the private document at `requester_key`, never in the log. A later event carries only what changed.",
+  "type": "object",
+  "required": ["request", "stage"],
+  "additionalProperties": false,
+  "properties": {
+    "request": {"type": "string", "pattern": "^req-[0-9a-f]{10}$"},
+    "stage": {"enum": ["received", "proposed", "confirmed", "declined", "withdrawn"]},
+    "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+    "mode": {"enum": ["in-person", "remote", "hybrid"]},
+    "from": {"type": "string", "format": "date"},
+    "to": {"type": "string", "format": "date"},
+    "region": {"type": ["string", "null"]},
+    "partner": {"type": ["string", "null"]},
+    "expected_learners": {"type": "integer", "minimum": 1},
+    "reply_by": {"type": "string", "format": "date"},
+    "requester_key": {"type": "string", "pattern": "^requests/req-[0-9a-f]{10}\\.json$"},
+    "instructor": {"type": "string", "pattern": "^tm:instructor/"},
+    "reason": {"enum": ["no-one-cleared", "no-one-free", "too-soon", "not-offered"]}
+  }
+}

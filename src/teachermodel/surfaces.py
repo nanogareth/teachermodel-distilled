@@ -3,7 +3,9 @@
     ctx = surfaces.context(private, now)
     surfaces.this_week(ctx)            the head of training's decisions, risks ahead and sources not reporting
     surfaces.coordinator_board(ctx)    sessions delivered with learners expected and results received, as counts
-    surfaces.my_record(ctx, uri)       one instructor's sessions ahead, clearances, observations, results, coaching
+    surfaces.my_record(ctx, uri)       one instructor's sessions ahead, clearances, observations, results, coaching,
+                                       and how they score against the calibration reference (decision 0032)
+    surfaces.request_status(ctx, st, id)  one programme request as its requester reads it (decision 0034)
     surfaces.project(model, surface, role, viewer)   the model as `role` may see it (standards/audience.yaml)
 
 Each read model is a plain dict built from the index, the schedule (decision 0027), the course records, the audition
@@ -25,13 +27,18 @@ from typing import Any
 import yaml
 
 from . import course as course_mod
-from . import feeds, freshness, index, setup
+from . import events as events_mod
+from . import feeds, freshness, index
+from . import requests as requests_mod
 from . import schedule as schedule_mod
-from .standards import ROOT, load_standards, load_yaml
+from . import setup, units
+from .flows.calibration import EVENT_LOG, observer_detail
+from .standards import ROOT, domain_ids, load_standards, load_yaml
 
 AUDIENCE = Path("standards") / "audience.yaml"
 AHEAD_DAYS = 21  # how far ahead This week looks for risks (operational default, decision 0002)
 DELIVERED_DAYS = 31  # how far back the coordinator board lists delivered sessions
+ROOM_DAYS = 183  # how far back "where learners stall" reads live rooms (operational default, decision 0002)
 COVERED = ("cleared", "cleared_with_conditions")
 OVERRIDE_STEP = "tm:step/override-decision"  # flows/override.py STEP_DECISION; its `due` dates the card
 
@@ -52,6 +59,7 @@ class Context:
     root: Path
     labs: dict[str, str]  # lab slug -> status in the latest release check (decision 0028)
     received: dict[str, dict[str, int]]  # delivery ref -> results received and unreadable (decision 0028)
+    log: list[dict[str, Any]]  # the event log, for what the index does not hold
 
 
 def context(private: Path | str, now: datetime, root: Path = ROOT) -> Context:
@@ -66,7 +74,8 @@ def context(private: Path | str, now: datetime, root: Path = ROOT) -> Context:
     return Context(private, now, now.date(), con, found.sessions if found else (),
                    freshness.status(private, now, root), load_standards(root)["rules"], root,
                    {lab["lab"]: lab["status"] for lab in release.get("labs") or []},
-                   {d["delivery_ref"]: d for d in received.get("deliveries") or []})
+                   {d["delivery_ref"]: d for d in received.get("deliveries") or []},
+                   list(events_mod.read(private / EVENT_LOG)) if (private / EVENT_LOG).is_file() else [])
 
 
 def _rows(ctx: Context, sql: str, *args: Any) -> list[sqlite3.Row]:
@@ -123,6 +132,72 @@ def _open_overrides(ctx: Context) -> list[dict[str, Any]]:
 # --- the head of training ----------------------------------------------------------------------------------------
 
 
+def _stalls(ctx: Context) -> dict[str, Any]:
+    """Across recent live rooms, the steps that held a third of a room, most often first: a fact about a lab, so nothing
+    here is joined to a session or an instructor (decision 0033)."""
+    since = (ctx.on - timedelta(days=ROOM_DAYS)).isoformat()
+    rooms = [r for r in feeds.returns(ctx.private, feeds.ROOM) if r["ended_at"][:10] >= since]
+    steps: dict[tuple[str, int], dict[str, Any]] = {}
+    for room in sorted(rooms, key=lambda r: r["ended_at"]):
+        for s in room["steps"]:
+            row = steps.setdefault((room["lab"], s["step"]), {"lab": room["lab"], "step": s["step"], "rooms": 0,
+                                                              "rooms_held": 0, "longest_held": 0, "demonstrated": 0})
+            row["title"] = s["title"]  # the latest room's words
+            row["rooms"] += 1
+            row["rooms_held"] += s["held_minutes"] > 0
+            row["longest_held"] = max(row["longest_held"], s["held_minutes"])
+            row["demonstrated"] += any(m["step"] == s["step"] for m in room["marks"])
+    held = [r for r in steps.values() if r["rooms_held"]]
+    return {"rooms": len(rooms), "labs": len({r["lab"] for r in rooms}),
+            "steps": sorted(held, key=lambda r: (-r["rooms_held"], -r["longest_held"], r["lab"], r["step"]))}
+
+
+def _requests(ctx: Context) -> list[dict[str, Any]]:
+    """Programme requests still to come or still open, soonest reply first (decision 0034)."""
+    rows = []
+    for rid, r in requests_mod.state(ctx.log).items():
+        if r["stage"] == "withdrawn" or (r["stage"] not in requests_mod.OPEN and r["to"] < ctx.on.isoformat()):
+            continue
+        rows.append({"request": rid, "unit": r["unit"], "mode": r["mode"], "from": r["from"], "to": r["to"],
+                     "region": r.get("region"), "expected_learners": r["expected_learners"], "stage": r["stage"],
+                     "reply_by": r["reply_by"], "instructor": r.get("instructor"),
+                     "late": r["stage"] == "received" and r["reply_by"] < ctx.on.isoformat()})
+    return sorted(rows, key=lambda x: (x["stage"] not in requests_mod.OPEN, x["reply_by"], x["request"]))
+
+
+def _instructor_name(st: Any, uri: str) -> str:
+    for row in (st.roster or {}).get("instructors") or []:
+        if row.get("instructor") == uri:
+            return (row.get("identity") or {}).get("name") or uri.split("/")[-1]
+    return uri.split("/")[-1]
+
+
+def request_status(ctx: Context, st: Any, request: str) -> dict[str, Any]:
+    """One request as its requester reads it: the stage and, once proposed, one person and the outbound words. Who else
+    was considered, and why, is not in this model at all (decisions 0005 and 0034)."""
+    r = requests_mod.state(ctx.log)[request]
+    private = requests_mod.private_document(ctx.private, request)
+    model = {"as_of": ctx.now.isoformat(), "request": request, "requester": private.get("requester"),
+             "programme": private.get("programme"), "unit_title": units.load(r["unit"], ctx.root)["title"],
+             "mode": r["mode"], "from": r["from"], "to": r["to"], "region": r.get("region"),
+             "expected_learners": r["expected_learners"], "stage": r["stage"], "reply_by": r["reply_by"],
+             "late": r["stage"] == "received" and r["reply_by"] < ctx.on.isoformat(),
+             "received_on": r["received_at"][:10], "proposed": None, "reason": r.get("reason")}
+    if r["stage"] in ("proposed", "confirmed"):
+        verdict = requests_mod.worst_verdict(st, r, r["instructor"])
+        model["proposed"] = {
+            "name": _instructor_name(st, r["instructor"]),
+            "cleared_until": verdict["expires"].isoformat() if verdict and verdict["expires"] else None,
+            "words": requests_mod.outbound_words(verdict) if verdict else [staffing_not_cleared()]}
+    return model
+
+
+def staffing_not_cleared() -> str:
+    from .staffing import NOT_CLEARED
+
+    return NOT_CLEARED
+
+
 def this_week(ctx: Context) -> dict[str, Any]:
     open_triggers: dict[str, list[sqlite3.Row]] = {}  # instructor -> unanswered triggers, oldest first
     for t in _rows(ctx, "SELECT * FROM triggers ORDER BY at"):
@@ -176,6 +251,8 @@ def this_week(ctx: Context) -> dict[str, Any]:
                 for s in ctx.sessions if s.status != "cancelled" and since <= s.end < ctx.on
                 and not (ctx.received.get(s.ref) or {}).get("received")  # the dry run shows some in: not waiting
                 and not _rows(ctx, "SELECT 1 FROM outcomes WHERE delivery_ref = ?", s.ref)]
+    waiting += [{"kind": "request", "request": r["request"], "reply_by": r["reply_by"]}
+                for r in _requests(ctx) if r["late"]]
     soon = (ctx.on + timedelta(days=60)).isoformat()
     return {
         "as_of": ctx.now.isoformat(),
@@ -185,6 +262,7 @@ def this_week(ctx: Context) -> dict[str, Any]:
         "release_check": {"state": lab_state, "last": release.last.isoformat() if release and release.last else None,
                           "due": release.due.isoformat() if release and release.due else None},
         "waiting": waiting,
+        "stalls": _stalls(ctx),
         "sources": _sources(ctx),
         "fine": {"instructors_active": _rows(ctx, "SELECT count(*) FROM instructors WHERE status = 'active'")[0][0],
                  "clearances_valid_60_days": _rows(ctx, "SELECT count(*) FROM clearances WHERE expires > ?", soon)[0][0]},
@@ -223,7 +301,7 @@ def coordinator_board(ctx: Context) -> dict[str, Any]:
         auditions.append({"audition": aid, "stage": stage, "forms_in": forms,
                           "replaced": len(rec.get("replaced") or [])})
     return {"as_of": ctx.now.isoformat(), "deliveries": deliveries, "course": grid, "auditions": auditions,
-            "sources": _sources(ctx, owner="coordinator")}
+            "requests": _requests(ctx), "sources": _sources(ctx, owner="coordinator")}
 
 
 # --- one instructor ----------------------------------------------------------------------------------------------
@@ -264,6 +342,7 @@ def my_record(ctx: Context, instructor: str) -> dict[str, Any]:
                      for c in _rows(ctx, "SELECT * FROM cycles WHERE instructor = ? ORDER BY number", instructor)],
         "course": [{"session": r["session"], "title": r["title"], "recorded": r["recorded"]}
                    for r in course_mod.status(ctx.private, instructor, ctx.root)],
+        "calibration": observer_detail(ctx.private, ctx.log, instructor, domain_ids(ctx.root), ctx.on),
     }
 
 
@@ -317,7 +396,7 @@ def project(model: dict[str, Any], surface: str, role: str, viewer: str | None =
     allowed = (rules.get("surfaces") or {}).get(surface)
     if allowed is None:
         raise AudienceError(f"{role} may not open {surface} ({AUDIENCE.as_posix()})")
-    if rules.get("own_only") and model.get("instructor") != viewer:
+    if rules.get("own_only") and model.get(rules.get("own_field", "instructor")) != viewer:
         raise AudienceError(f"{role} may open only their own record")
     seen = copy.deepcopy(model) if allowed == "*" else _prune(model, _tree(allowed))
     if leaked := [n for n in _field_names(seen) if any(w in n for w in rules.get("never") or [])]:

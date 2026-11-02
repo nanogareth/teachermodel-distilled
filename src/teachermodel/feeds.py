@@ -35,12 +35,15 @@ FEEDS = {
 DRAFT = "tm:contract/draft@1"
 SESSION = "tm:contract/claude-session@1"
 COMMAND = "tm:contract/command@1"
+ROOM = "tm:contract/room-summary@1"  # one file per live room (decision 0033)
 RETURNS = Path("outbox") / "received"
 MANY = {
     DRAFT: ("draft.schema.json", RETURNS / "drafts", "drafted_at"),
     SESSION: ("claude-session.schema.json", RETURNS / "sessions", "ended_at"),
     COMMAND: ("command.schema.json", RETURNS / "commands", "at"),
+    ROOM: ("room-summary.schema.json", Path("inputs") / "rooms", "ended_at"),
 }
+LATER_REPLACES = (DRAFT, ROOM)  # a newer draft or room summary replaces an older one; the others are kept once
 INBOX = Path("inbox")
 
 
@@ -72,7 +75,7 @@ def _return_problems(doc: dict[str, Any], root: Path) -> list[str]:
     from . import interventions
 
     buttons = {b["id"]: b for b in interventions.chains_doc(root).get("buttons") or []}
-    if doc["schema"] == COMMAND:
+    if doc["schema"] in (COMMAND, ROOM):
         return []
     button = buttons.get(doc["button"])
     want = "draft" if doc["schema"] == DRAFT else "act"
@@ -106,6 +109,8 @@ def _key(doc: dict[str, Any]) -> str:
         return doc["action_id"]
     if doc["schema"] == SESSION:
         return doc["session_id"]
+    if doc["schema"] == ROOM:
+        return doc["room_id"]
     stamp = hashlib.sha256(f"{doc['at']}|{doc['choice']}|{doc['by']}".encode()).hexdigest()[:8]
     return f"{doc['action_id']}-{stamp}"
 
@@ -133,9 +138,10 @@ def import_feed(private: Path | str, source: Path | str, root: Path = ROOT) -> F
         target = Path(private) / folder / f"{_key(doc)}.json"
         if target.exists() and target.read_bytes() != Path(source).read_bytes():
             kept = _read(target)
-            if schema != DRAFT or str(kept[stamp]) >= str(doc[stamp]):
+            if schema not in LATER_REPLACES or str(kept[stamp]) >= str(doc[stamp]):
                 raise FeedError(f"{target.name} was received already; a {schema.split('/')[-1]} is kept once"
-                                + (" (a newer draft replaces an older one)" if schema == DRAFT else ""))
+                                + (f" (a newer {'draft' if schema == DRAFT else 'summary'} replaces an older one)"
+                                   if schema in LATER_REPLACES else ""))
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(source, target)
         return Feed(schema, target, str(doc[stamp]))

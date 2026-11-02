@@ -10,7 +10,7 @@ from pathlib import Path
 
 import yaml
 
-from . import app, config, daily, devsign, events, pilot, roster, setup, staffing, standards
+from . import app, config, daily, devsign, events, pilot, requests, roster, setup, staffing, standards
 from .audition import AuditionError
 from .course import CourseError
 from .matching import MatchError
@@ -96,6 +96,14 @@ def _build_parser() -> argparse.ArgumentParser:
     io = _store_parser(sub, "import-outcomes",
                        "import an outcome-import@1 file (aggregates per delivery; any learner field refuses the file)")
     io.add_argument("file", type=Path)
+    rq = _store_parser(sub, "request", "a programme someone asks the training function to staff (decision 0034): new, "
+                                       "propose, confirm, decline, withdraw, status")
+    rq.add_argument("action", choices=["new", "propose", "confirm", "decline", "withdraw", "status"])
+    rq.add_argument("target", nargs="?", help="new: the request page's saved file; otherwise the request id")
+    rq.add_argument("--requester", help="new: the mailbox the status goes back to")
+    rq.add_argument("--instructor", help="propose: tm:instructor/<id>")
+    rq.add_argument("--reason", choices=list(requests.REASONS), help="decline")
+
     au = _store_parser(sub, "audition", "a candidate's audition on the clearance rubric, kept apart from the instructor "
                                         "record (decision 0025): new, assign, replace, score, status, result, decide, "
                                         "carry")
@@ -372,9 +380,42 @@ def _store_command(args: argparse.Namespace) -> int:
             print(f"course: {done} of {len(rows)} sessions recorded for {args.instructor}")
     elif args.cmd == "audition":
         return _audition(private, args)
+    elif args.cmd == "request":
+        return _request(private, args)
     else:  # tick
         for rep in app.do_tick(private):
             _print(rep, details=rep.summary.startswith("next:"))
+    return 0
+
+
+def _request(private: Path, args: argparse.Namespace) -> int:
+    """`teachermodel request`: exit 0 done, 1 refused with the reasons."""
+    try:
+        if args.action == "status":
+            found = requests.state(list(events.read(private / app.EVENT_LOG)))
+            for rid, r in sorted(found.items()):
+                if args.target in (None, rid):
+                    print(f"{rid}  {r['stage']:<10} {r['unit']} {r['mode']} {r['from']} to {r['to']}"
+                          f"  reply by {r['reply_by']}" + (f"  {r['instructor']}" if r.get("instructor") else ""))
+            return 0
+        if not args.target:
+            raise requests.RequestError(f"{args.action} needs {'a file' if args.action == 'new' else 'a request id'}")
+        if args.action == "new":
+            made = requests.new(private, json.loads(Path(args.target).read_text(encoding="utf-8")), args.requester or "")
+            print(f"{made.request}: {'received' if made.created else 'already in'}")
+        elif args.action == "propose":
+            print(f"{args.target}: proposed {args.instructor} ({requests.propose(private, args.target, args.instructor or '')})")
+        elif args.action == "confirm":
+            print(f"{args.target}: confirmed ({requests.confirm(private, args.target)})")
+        elif args.action == "decline":
+            requests.decline(private, args.target, args.reason or "")
+            print(f"{args.target}: declined")
+        else:
+            requests.withdraw(private, args.target)
+            print(f"{args.target}: withdrawn")
+    except (requests.RequestError, OSError, ValueError) as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 1
     return 0
 
 

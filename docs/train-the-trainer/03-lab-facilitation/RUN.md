@@ -83,6 +83,9 @@ or Linux, and ask at T-7 which laptops do.
 
 The room page refreshes every five seconds and counts devices, not people. It keeps progress in
 memory only, so a restarted collector starts from zero and the learners' next checks fill it again.
+The page says "working on", and "a few" for one or two in a room under 15. The collector also prints a key for your own
+view, `/instructor?key=...`, for your unshared screen: how long a step has held devices, the line over ten minutes,
+the step's hint and a button that marks a demonstration. Learners who see "not yet" now get the step's hint.
 
 ### Judging the log
 
@@ -303,7 +306,7 @@ in Phase 3 they open the lab, work it as learners and score; in Phase 4 they rea
 - **0:02** The lab: *"The lab is an exporter that turns learners' results into pass rates for a
   review outside the team. Its visible tests pass, and the export is still not safe to send. The
   learners' job is to find out why and prove it with their own tests. Each check they run reports to
-  a room page, so you can see from the front who has passed which step and who is stuck."*
+  a room page, so you can see from the front how many have passed each step and how many are working on it."*
 - **0:03** Delivery failures and the anchors: *"A delivery failure is something in the room, not in
   the learner's code: the laptop, the network, the room server, the lab's own files. The rubric has
   four anchors for it. One: the lab stalls. Two: you fix the learner with the problem, and everyone
@@ -355,7 +358,7 @@ the folder above the lab, so the check never runs and the laptop never reports.
 - **0:12** Brief step 2: *"Step 2 checks your own tests. Write a test with `identity` in its name,
   for example `test_identity_file_names_stay_out`, that fails while anything in the output can lead
   back to a learner. Then run `python checkpoint.py 2`. While the exporter still leaks, 'not yet' is
-  the right answer, and the page will show you as stuck on step 2. That is where you should be."*
+  the right answer, and the page will count you as working on step 2. That is where you should be."*
 - **0:13** Walk the room. Read the page aloud once: how many have passed step 1, how many are
   stuck on step 2.
 - **0:15** *"Stop. One minute: score my opening in box 1.1, lab facilitation only, with one line of

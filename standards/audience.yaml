@@ -2,7 +2,7 @@
 # A surface or field a role is not given here is dropped. "*" keeps everything. `never` lists words that must not
 # appear in any field name the role receives: a second guard behind the whitelist, so a field added to a read model
 # later cannot leak a score to someone who sees status only (decision 0005). `own_only`: the role may open the
-# surface only about themself. `named_roles`: fields in which another instructor's id may appear in someone's own
+# surface only about themself, matched on `own_field` (default `instructor`). `named_roles`: fields in which another instructor's id may appear in someone's own
 # record (who leads, co-delivers, observes or coaches them).
 schema_version: 1
 named_roles: [lead, co, observer, coach]
@@ -13,6 +13,7 @@ roles:
       coordinator-board: "*"
       my-record: "*"
       outbox: "*"            # decision 0029: what the chains would send; the head of training only
+      request-status: "*"    # decision 0034
   coordinator:
     surfaces:
       coordinator-board:
@@ -29,9 +30,34 @@ roles:
         - auditions.stage
         - auditions.forms_in
         - auditions.replaced
+        - requests            # decision 0034: the stage and who is proposed; the match page is its own view
         - sources
     never: [score, baseline, mean, pass, disagree, discuss, outcome]
   instructor:
     own_only: true
     surfaces:
       my-record: "*"
+  requester:                  # decision 0034: someone outside the training function, about their own request
+    own_only: true
+    own_field: requester
+    surfaces:
+      request-status:
+        - as_of
+        - request
+        - requester
+        - programme
+        - unit_title
+        - mode
+        - from
+        - to
+        - region
+        - expected_learners
+        - stage
+        - reply_by
+        - late
+        - received_on
+        - proposed.name
+        - proposed.cleared_until
+        - proposed.words
+        - reason
+    never: [score, baseline, mean, pass, disagree, discuss, outcome, booked, travel, candidate, coach]

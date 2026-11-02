@@ -260,3 +260,34 @@ def test_an_override_for_a_day_gone_by_is_not_asked_any_more(store, tmp_path):
     assert week_at(s, NOW)["decisions"]["overrides"] == []
 
 
+def _room(store, n, held, ended, lab="lab-a", demo=False):
+    path = store / "inputs" / "rooms"
+    path.mkdir(parents=True, exist_ok=True)
+    (path / f"{lab}-{n}.json").write_text(json.dumps(
+        {"schema": "tm:contract/room-summary@1", "source": "generated", "room_id": f"{lab}-{n}", "lab": lab,
+         "started_at": ended, "ended_at": ended, "minutes": 60, "devices": 12,
+         "steps": [{"step": 2, "title": "Property 1", "reached": 9, "stuck_at_end": 0, "stuck_peak": 5,
+                    "long_stuck_peak": 4, "held_minutes": held}],
+         "marks": [{"minute": 20, "step": 2}] if demo else [], "refused": 0}), encoding="utf-8")
+
+
+def test_stalls_count_rooms_that_a_step_held_within_six_months(tmp_path):
+    _room(tmp_path, 1, 9, "2026-10-01T09:00:00+00:00", demo=True)
+    _room(tmp_path, 2, 0, "2026-09-01T09:00:00+00:00")
+    _room(tmp_path, 3, 30, "2026-04-29T09:00:00+00:00")  # 184 days before: outside
+    _room(tmp_path, 4, 5, "2026-04-30T09:00:00+00:00", lab="lab-b")  # 183 days before: inside
+    found = surfaces._stalls(surfaces.Context(tmp_path, NOW, NOW.date(), None, (), [], {}, tmp_path, {}, {}, []))
+    assert (found["rooms"], found["labs"]) == (3, 2)
+    assert [(s["lab"], s["rooms"], s["rooms_held"], s["longest_held"], s["demonstrated"]) for s in found["steps"]] == [
+        ("lab-a", 2, 1, 9, 1), ("lab-b", 1, 1, 5, 0)]
+
+
+def test_stalls_reach_only_the_head_and_name_no_one(store, built):
+    policy = surfaces.policy()
+    assert "stalls" in surfaces.project({"stalls": {}}, "this-week", "head-of-training")
+    assert "this-week" not in policy["roles"]["coordinator"]["surfaces"]
+    assert "this-week" not in policy["roles"]["instructor"]["surfaces"]
+    schema = json.loads((surfaces.ROOT / "contracts" / "room-summary.schema.json").read_text(encoding="utf-8"))
+    assert not {"session", "instructor", "lead", "device"} & set(schema["properties"])
+
+

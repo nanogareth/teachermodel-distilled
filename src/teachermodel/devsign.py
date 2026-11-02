@@ -20,6 +20,7 @@ kept under `dev-autosign/<run time>/round-NN/` in the store, so what was signed 
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from collections import Counter
@@ -95,6 +96,22 @@ def _reference(private: Path, exercise: str) -> dict[str, int] | None:
     return json.loads(path.read_text(encoding="utf-8"))["scores"] if path.is_file() else None
 
 
+def like_a_person(reference: dict[str, int] | None, exercise: str, signer: str) -> dict[str, int] | None:
+    """A generated observer's scores on an exercise: the reference with a lean of their own, one point off on one domain
+    and on a second every other exercise, so a generated store has a calibration chart to read (decision 0032). Up to
+    two of five domains off by one still passes both thresholds."""
+    if reference is None:
+        return None
+
+    def digest(*parts: str) -> int:
+        return hashlib.sha256("|".join(parts).encode()).digest()[0]
+
+    domains = sorted(reference, key=lambda d: (digest(signer, d), d))
+    lean = 1 if digest(signer) % 2 else -1
+    off = domains[:1 + digest(exercise, signer) % 2] if len(reference) >= 5 else []
+    return {d: s + (lean if 1 <= s + lean <= 4 else -lean) if d in off else s for d, s in reference.items()}
+
+
 def _signed(st: app.State) -> set[tuple[str, str, str, str]]:
     """(step, subject, signer, input hash) of every sign-off in the log."""
     return {(e["payload"]["step"], e["subject_uri"], e["actor"], e["payload"]["input_sha256"])
@@ -124,7 +141,8 @@ def _sign_round(st: app.State, out_dir: Path, at: datetime, n: int, generated_on
                 or (data["step"], data["subject_uri"]) in taken:
             continue
         taken.add((data["step"], data["subject_uri"]))
-        scores = _reference(private, data["subject_uri"]) if data["step"] == STEP_SCORE else None
+        scores = like_a_person(_reference(private, data["subject_uri"]), data["subject_uri"], data["signer"]) \
+            if data["step"] == STEP_SCORE else None
         turn = sum(1 for (step, subject, *_rest) in signed if (step, subject) == (data["step"], data["subject_uri"]))
         fields = answers(data, today, scores=scores, turn=turn)
         sid = input_sha256([data["step"], data["subject_uri"], data["signer"], data["input_sha256"], fields])[:32]

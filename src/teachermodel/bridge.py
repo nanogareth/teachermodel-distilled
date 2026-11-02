@@ -43,6 +43,7 @@ LIBRARY_CHANNEL_DISABLED = "library channel disabled until the Graph driver (cre
 SIGNOFF_SEARCH = "tm-signoff"  # the bare text a driver searches for (brackets may be split by KQL)
 SIGNOFF_SUBJECT_TAG = "[tm-signoff"  # what a sign-off message subject must contain
 AUDITION_STEP = "tm:step/audition-score"  # decision 0031: set aside for the audition, never an event
+REQUEST_FORM = "tm:contract/programme-request@1"  # decision 0034: not a sign-off; the sender is who asked
 
 _SMTP_RE = re.compile(r"^[^@\s/]+@[^@\s]+$")
 _STEP_RE = re.compile(r"^tm:step/[a-z0-9-]+$")
@@ -155,6 +156,8 @@ class Applied:
     # Audition forms (document, verified sender), set aside before any workflow check and logged nowhere: the caller
     # hands them to `audition.receive` (decision 0031).
     auditions: list[tuple[dict[str, Any], str]] = field(default_factory=list)
+    # Programme requests (document, verified sender): the caller hands them to `requests.receive` (decision 0034).
+    requests: list[tuple[dict[str, Any], str]] = field(default_factory=list)
 
 
 def _dt(value: Any) -> datetime:
@@ -441,6 +444,9 @@ def _signoff(oid, content, sender, step_defs, subjects, registrations, open_set,
         return
     if not isinstance(doc, dict):
         reject(oid, None, None, ["not a JSON object"])
+        return
+    if doc.get("schema") == REQUEST_FORM:
+        out.requests.append((doc, sender))
         return
     step = doc.get("step") if isinstance(doc.get("step"), str) else None
     subject = doc.get("subject_uri") if isinstance(doc.get("subject_uri"), str) else None

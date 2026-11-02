@@ -299,9 +299,10 @@ class _Run:
         day = at.date()
         scores = None
         if step == STEP_SCORE:
-            scores = devsign._reference(self.store, subject)
-            if scores and subject == self.first_exercise and signer == self._first_clearer(st):
-                scores = {d: (s + 2 if s <= 2 else s - 2) for d, s in scores.items()}  # one clearer misses the first time
+            reference = devsign._reference(self.store, subject)
+            scores = devsign.like_a_person(reference, subject, signer)
+            if reference and subject == self.first_exercise and signer == self._first_clearer(st):
+                scores = {d: (s + 2 if s <= 2 else s - 2) for d, s in reference.items()}  # one clearer misses the first time
         fields = devsign.answers(data, day, note="Simulated evidence", scores=scores, turn=turn)
         inst = self.instructor_of(st, subject)
         persona = PERSONA.get(inst or "", "solid")

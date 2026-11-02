@@ -31,6 +31,7 @@ PAYLOAD_SCHEMAS = {
     "cpd": "cpd.schema.json",
     "outcome": "outcome.schema.json",
     "bench_decision": "bench-decision.schema.json",
+    "request": "request.schema.json",  # decision 0034
 }
 _CHILD_URI = {
     "assignment": re.compile(r"^tm:assignment/[0-9a-f]{16}$"),

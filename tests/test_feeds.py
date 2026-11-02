@@ -101,3 +101,29 @@ def test_the_command_keeps_a_feed_and_refuses_a_bad_one(tmp_path, capsys):
     assert cli.main(["import-feed", "--private-dir", str(tmp_path),
                      str(write(tmp_path / "r.json", received(unreadable="one")))]) == 1
     assert "unreadable" in capsys.readouterr().err
+
+
+def room_summary(room_id="a-lab-202610010900-abcd", ended="2026-10-01T10:30:00+00:00", held=9, marks=(), lab="a-lab"):
+    return {"schema": feeds.ROOM, "source": "generated", "room_id": room_id, "lab": lab,
+            "started_at": "2026-10-01T09:00:00+00:00", "ended_at": ended, "minutes": 90, "devices": 24,
+            "steps": [{"step": 2, "title": "Property 1", "reached": 20, "stuck_at_end": 1, "stuck_peak": 9,
+                       "long_stuck_peak": 8, "held_minutes": held}],
+            "marks": list(marks), "refused": 0}
+
+
+def test_a_room_summary_is_kept_one_file_per_room_and_a_later_one_replaces_it(tmp_path):
+    source = tmp_path / "room.json"
+    source.write_text(json.dumps(room_summary()), encoding="utf-8")
+    got = feeds.import_feed(tmp_path, source)
+    assert got.path == tmp_path / "inputs" / "rooms" / "a-lab-202610010900-abcd.json"
+    source.write_text(json.dumps(room_summary(ended="2026-10-01T10:45:00+00:00", held=12)), encoding="utf-8")
+    feeds.import_feed(tmp_path, source)
+    assert [r["steps"][0]["held_minutes"] for r in feeds.returns(tmp_path, feeds.ROOM)] == [12]
+    source.write_text(json.dumps(room_summary(ended="2026-10-01T10:00:00+00:00", held=1)), encoding="utf-8")
+    with pytest.raises(feeds.FeedError, match="received already"):
+        feeds.import_feed(tmp_path, source)
+
+
+@pytest.mark.parametrize("extra", [{"session": "s-1"}, {"instructor": "tm:instructor/a1c4f"}, {"device": "0123456789abcdef"}])
+def test_a_room_summary_may_not_carry_a_session_an_instructor_or_a_device(extra):
+    assert feeds.problems({**room_summary(), **extra})
