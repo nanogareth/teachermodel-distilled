@@ -27,9 +27,10 @@ teachermodel check-draft <file>    # a Claude button's draft, a session record o
 teachermodel claude-kit --out deploy/claude/kit [--connector name=url]  # the Claude buttons' deployment files from standards/chains.yaml (0029)
 teachermodel history --clearance <uri>  # a clearance's full history from the log alone
 teachermodel audit-export --quarter <YYYYQn>  # a quarter's audit samples as JSON (exports/)
-teachermodel audition new|assign|score|status|result|decide|carry  # a candidate's audition on the rubric, kept apart (0025)
+teachermodel audition new|assign|score|status|result|decide|carry  # a candidate's audition on the rubric, kept apart (0025); assign draws each observer's signed page, forms return by mail with no event (0031)
 py scripts/audition_drill.py       # audition acceptance drill on a 4-week simulated store (about 3 minutes)
-teachermodel course record|status --instructor <uri> [--session <id> --evidence-ref <key>]  # train-the-trainer record
+teachermodel course intake <file> --instructor <uri> --session <id> --on <day> [--catalogue <f>] [--reference <key>]  # check, store, record (0030)
+teachermodel course record|status --instructor <uri> [--session <id> --evidence-ref <key> --on <day>]  # by hand: the key must exist
 teachermodel check-questions <file>  # a session 2 question set: pre_check shape, each wrong option names a misconception
 teachermodel check-failure-log <file> --catalogue <lab staff/catalogue.yaml>  # a session 3 failure log against the lab
 teachermodel compare-scores <file> --reference <file> [--out <file>]  # session 5: scores against the reference (not a calibration)

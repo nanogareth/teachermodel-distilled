@@ -5,6 +5,8 @@ supersedes: null
 ---
 # 0025 Auditions are evidence for a hiring decision, kept apart from the instructor record
 
+Amended by 0031 (2026-11-01): observers score on their own signed page, returned through the sign-off mailbox and kept with the audition; the coordinator's transcription is the paper fallback. Auditions still write nothing to the event log.
+
 ## Context
 Hiring an instructor and clearing one were judged on different evidence. A candidate taught a sample session that
 someone liked or did not, and months later the same person was observed on the five-domain rubric for clearance.

@@ -238,3 +238,25 @@ def test_this_week_lists_the_sessions_ahead_and_what_it_waits_for(built):
 # --- the coordinator board and My record pages ---------------------------------------------------------------------------
 
 
+# --- the override card: an open request is the head's decision ----------------------------------------
+
+def week_at(s, now):
+    ctx = surfaces.context(s, now)
+    try:
+        return surfaces.this_week(ctx)
+    finally:
+        ctx.con.close()  # an open index blocks the next rebuild on Windows
+
+
+def test_an_override_for_a_day_gone_by_is_not_asked_any_more(store, tmp_path):
+    import shutil
+
+    from teachermodel.flows import override
+
+    s = tmp_path / "gone"
+    shutil.copytree(store, s)
+    override.request_override(s, instructor=A, unit=UNIT, mode="in-person", date="2026-10-29",
+                              now=datetime(2026, 10, 28, 9, 0, tzinfo=timezone.utc))
+    assert week_at(s, NOW)["decisions"]["overrides"] == []
+
+

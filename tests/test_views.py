@@ -1,6 +1,7 @@
 """`teachermodel views` (views.py, increment 4 item 3): the clearance matrix, coaching logs, quality review, monthly
 outcomes and instructor records, written from the index. Run on a one-week simulated store (generated data only)."""
 
+import re
 from datetime import date
 
 import pytest
@@ -21,7 +22,8 @@ def store(tmp_path_factory):
         uri = "tm:instructor/a1c4f"
         for ref, learners, score, day in (("v-few", 9, 40.0, "2026-10-20"),  # below the minimum learner count
                                           ("v-many", 18, 55.0, "2026-10-20"), ("v-more", 30, 70.0, "2026-10-21"),
-                                          ("v-sep", 20, 80.0, "2026-09-29")):
+                                          ("v-sep", 20, 80.0, "2026-09-29"),
+                                          ("v-aug", 12, 50.0, "2026-08-18")):  # a month of one small delivery
             events.append(s / app.EVENT_LOG, events.make_event(
                 "outcome", uri, "tm:system/teachermodel",
                 {"delivery_ref": ref, "instructor": uri, "unit": "sl:unit/example-agent-loop@1", "mode": "remote",
@@ -64,17 +66,24 @@ def test_quality_review_hides_outcomes_below_the_minimum_learner_count(store):
 
 def test_monthly_outcomes_weight_by_learners_and_leave_small_cohorts_out(store):
     html = view(store, "monthly-outcomes.html")
+    assert '<td data-label="Too small to read">' in html  # a phone stacks the rows as label and value
+    html = re.sub(r' data-label="[^"]*"', "", html)
 
     def row(month):
         start = html.index(f"<td>{month}</td><td>a1c4f</td>")
         return html[start:html.index("</tr>", start)]
 
-    # October: 18 at 55.0 and 30 at 70.0 -> (990 + 2100) / 48 = 64.4 against 70.0; the 9-learner delivery adds nothing
+    # October: 18 at 55.0 and 30 at 70.0 -> (990 + 2100) / 48 = 64.4 against 70.0; the 9-learner delivery adds no
+    # figure, but its learners are counted, so the row never reads as if nobody turned up
     october = row("2026-10")
-    assert "<td>2</td><td>48</td><td>64.4</td><td>70.0</td><td>-5.6</td><td>1</td>" in october
+    assert ("<td>2</td><td>48</td><td>64.4</td><td>70.0</td><td>-5.6</td><td>1 delivery, 9 learners</td>"
+            in october)
     assert "40.0" not in october
-    assert "<td>1</td><td>20</td><td>80.0</td><td>70.0</td><td>+10.0</td><td>0</td>" in row("2026-09")
+    assert "<td>1</td><td>20</td><td>80.0</td><td>70.0</td><td>+10.0</td><td>none</td>" in row("2026-09")
+    august = row("2026-08")  # only a small delivery: no figures, and still not "0 learners"
+    assert "<td>0</td><td>0</td>" in august and "1 delivery, 12 learners" in august and "50.0" not in august
     assert html.index("<td>2026-10</td>") < html.index("<td>2026-09</td>")  # newest month first
+    assert "<th>Too small to read</th>" in html and "<th>Learners measured</th>" in html
 
 
 def test_views_show_ids_only_and_load_nothing_from_outside(store):

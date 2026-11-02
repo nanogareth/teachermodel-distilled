@@ -123,7 +123,7 @@ details.ref > summary { font-weight: 600; }
  "signer": "tm:person/example-owner",
  "role": "programme-owner",
  "input_sha256": "d6de54cf761085623313fc374b75f42710b8a78533ad87f6a383af9961e456d7",
- "page_template_sha256": "8036b820fbd167abf824dc0e4cc258f74ae67a4a7a3276609a8430a07b7b5b38",
+ "page_template_sha256": "eb011d97b8cd678e5e0212a1c1e92ddae302b9aa06d848dc3b82df989a7f9b76",
  "channel": {
   "kind": "library",
   "path": "Instructor Development Library/inbox"
@@ -210,6 +210,11 @@ details.ref > summary { font-weight: 600; }
       return;
     }
     if (score === null) { errors.push(f.label + ': choose a score 1 to 4'); return; }
+    if (score === 'no') {
+      if (note === '') { errors.push(f.label + ': not observable: say why it could not be observed'); return; }
+      fields[f.name] = { not_observable: true, note: note };
+      return;
+    }
     if (note === '') { errors.push(f.label + ': evidence note required'); return; }
     v = { score: parseInt(score, 10), note: note };
     if (ts !== '') { v.timestamp = ts; }

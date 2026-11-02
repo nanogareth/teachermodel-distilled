@@ -239,13 +239,18 @@ def _normalise_field(spec: dict[str, Any]) -> dict[str, Any]:
             raise ValueError(f"field {name!r}: score value must be 1-4")
     if kind == "evidence_score":
         out["anchors"] = list(spec.get("anchors") or [])
+        if spec.get("not_observable"):
+            out["not_observable"] = True  # decision 0031: a fifth choice, saved as {not_observable: true, note}
         v = out["value"]
-        if v is not None and not (
-            isinstance(v, dict) and type(v.get("score")) is int and v["score"] in (1, 2, 3, 4)
+        unseen = (out.get("not_observable") and isinstance(v, dict) and v.get("not_observable") is True
+                  and "score" not in v and isinstance(v.get("note"), str) and v["note"].strip())
+        if v is not None and not unseen and not (
+            isinstance(v, dict) and "not_observable" not in v and type(v.get("score")) is int and v["score"] in (1, 2, 3, 4)
             and isinstance(v.get("note"), str) and v["note"].strip()
             and isinstance(v.get("timestamp", ""), str)
         ):
-            raise ValueError(f"field {name!r}: an evidence_score value is {{score: 1-4, note: text, timestamp?: text}}")
+            raise ValueError(f"field {name!r}: an evidence_score value is {{score: 1-4, note: text, timestamp?: text}}"
+                             + (" or {not_observable: true, note: text}" if out.get("not_observable") else ""))
     if kind == "checklist":
         out["items"] = _checklist_items(name, spec.get("items"))
         if out["value"] is not None:
@@ -290,7 +295,7 @@ def _element_ids(f: dict[str, Any]) -> list[str]:
     if f["kind"] in ("score", "evidence_score"):
         ids += [f"{fid}-{p}" for p in (1, 2, 3, 4)]
     if f["kind"] == "evidence_score":
-        ids += [f"{fid}-note", f"{fid}-ts"]
+        ids += [f"{fid}-note", f"{fid}-ts"] + ([f"{fid}-no"] if f.get("not_observable") else [])
     if f["kind"] == "checklist":
         for item in f["items"]:
             base = f"{fid}-{item['id']}"
@@ -369,9 +374,16 @@ def _evidence_html(f: dict[str, Any], star: str, described: str, help_html: str)
         f'<input type="text" id="{fid}-ts" data-f="{name}" data-part="timestamp" maxlength="40" '
         f'value="{_esc(value.get("timestamp", ""))}">'
     )
+    unseen = ""
+    if f.get("not_observable"):
+        checked = " checked" if value.get("not_observable") is True else ""
+        unseen = (f'<label class="opt" for="{fid}-no"><input type="radio" id="{fid}-no" name="{fid}" '
+                  f'data-f="{name}" data-part="score" value="no"{checked}>Not observable in this slice'
+                  '<span class="anchor">The slice did not show this domain. Say why in the note; it is kept out of '
+                  'every average.</span></label>')
     return (
         f'<fieldset class="field"{described}><legend>{_esc(f["label"])}{star}</legend>{help_html}'
-        + _score_options(f, value.get("score"), ' data-part="score"') + note + stamp + "</fieldset>"
+        + _score_options(f, value.get("score"), ' data-part="score"') + unseen + note + stamp + "</fieldset>"
     )
 
 

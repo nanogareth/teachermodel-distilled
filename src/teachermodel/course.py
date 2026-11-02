@@ -1,6 +1,7 @@
 """`teachermodel course`: the train-the-trainer course record (docs/train-the-trainer/DESIGN.md, W1 step 3).
 
-    course record --instructor <tm:instructor/..> --session <id> --evidence-ref <private-store key> [--on DAY]
+    course intake <file> --instructor <tm:instructor/..> --session <id> --on DAY [--catalogue F] [--reference KEY]
+    course record --instructor <tm:instructor/..> --session <id> --evidence-ref <private-store key> --on DAY
     course status --instructor <tm:instructor/..>
     check-questions <file>   (session 2's evidence, checked before it is recorded)
     check-failure-log <file> --catalogue <lab catalogue>   (session 3's evidence)
@@ -11,12 +12,19 @@ completed, with the private-store key of its evidence (the rubric forms, the que
 training/<instructor slug>.yaml in the private store. A session is recorded once. The W1 train-the-trainer sign-off page
 exists only once every session is recorded (`flows.onboarding`), and its inputs include the list, so the sign-off binds
 to the record it was signed on. The record is not an event and holds no scores: the evidence stays under its key.
+
+Intake (decision 0030) is the usual route: the session's `check` in the standards file picks the checker, a pass stores
+the evidence under a generated key and records the session, and a refusal stores nothing and says what to fix. Every
+intake is a line in training/intake/<instructor slug>.jsonl, a private document beside the record, never an event.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import re
-from datetime import date
+from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +36,9 @@ from .util import slug
 
 COURSE = Path("standards") / "train-the-trainer.yaml"
 RECORDS = Path("training")
+INTAKE = RECORDS / "intake"
+EVIDENCE = Path("evidence") / "ttt"
+CHECKS = ("scan", "question-set", "failure-log", "scores")
 _KEY = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._/-]*$")
 _INSTRUCTOR = re.compile(r"^tm:instructor/[a-z0-9][a-z0-9-]*$")
 
@@ -44,6 +55,8 @@ def sessions(root: Path = ROOT) -> list[dict[str, Any]]:
     ids = [s.get("id") for s in found]
     problems = [f"session {s.get('id')!r}: needs id, title, domains and evidence" for s in found
                 if not all(s.get(k) for k in ("id", "title", "domains", "evidence"))]
+    problems += [f"session {s.get('id')}: check {s.get('check')} is not one of {', '.join(CHECKS)}" for s in found
+                 if s.get("check") not in CHECKS]
     problems += [f"session {s['id']}: unknown domain {d}" for s in found if s.get("id")
                  for d in s.get("domains") or [] if d not in domains]
     if len(set(ids)) != len(ids) or not found:
@@ -221,3 +234,129 @@ def record(private: Path, instructor: str, session: str, evidence_ref: str, on: 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(yaml.safe_dump({"instructor": instructor, "sessions": done}, sort_keys=False), encoding="utf-8",
                     newline="\n")
+
+
+# --- intake (decision 0030) -------------------------------------------------------------------------------------
+
+_SCANS = {".pdf": ("PDF", (b"%PDF-",)), ".png": ("PNG", (b"\x89PNG\r\n\x1a\n",)),
+          ".jpg": ("JPEG", (b"\xff\xd8\xff",)), ".jpeg": ("JPEG", (b"\xff\xd8\xff",))}
+_QUESTION = re.compile(r"^pre_check\[(\d+)\](?:\.options\[(\d+)\])?: ")
+_NO_MISCONCEPTION = "a wrong option needs misconception (an id from the unit) or proposed_misconception"
+
+
+@dataclass(frozen=True)
+class Intake:
+    stored: bool
+    key: str | None = None
+    problems: list[str] = field(default_factory=list)
+
+
+def scan_errors(name: str, data: bytes) -> list[str]:
+    """Problems with a scanned form (sessions 1 and 4), or []: a non-empty PDF, PNG or JPEG whose content matches its
+    name. The scan is not read beyond its first bytes."""
+    if not data:
+        return ["The file is empty."]
+    ext = Path(name).suffix.lower()
+    if ext not in _SCANS:
+        return [f"A scan is a PDF, PNG or JPEG file; this one is {ext or 'without an extension'}."]
+    kind, magic = _SCANS[ext]
+    return [] if data.startswith(magic) else [f"The file is named {ext} but is not a {kind}."]
+
+
+def plain(problems: list[str]) -> list[str]:
+    """Checker output for people: "Question 2, option C" for `pre_check[1].options[2]`, a sentence per problem."""
+    out = []
+    for p in problems:
+        m = _QUESTION.match(p)
+        if m:
+            where = f"Question {int(m[1]) + 1}" + (f", option {chr(ord('A') + int(m[2]))}" if m[2] else "")
+            text = p[m.end():]
+            if text == _NO_MISCONCEPTION:
+                text = ("say which wrong idea this answer shows (a misconception id from the unit, "
+                        "or proposed_misconception)")
+            p = f"{where}: {text}"
+        out.append(p if p.endswith(".") else p + ".")
+    return out
+
+
+def _check(session: dict[str, Any], path: Path, data: bytes, private: Path, catalogue: Path | None,
+           reference: str | None, root: Path) -> tuple[list[str], bytes, str]:
+    """(problems, the bytes to store, their extension). Problems are already in plain words."""
+    kind = session["check"]
+    if kind == "scan":
+        return scan_errors(path.name, data), data, path.suffix.lower()
+    if kind == "failure-log" and catalogue is None:
+        raise CourseError(f"{session['id']} is checked against the lab's catalogue: give --catalogue <file>")
+    if kind == "scores":
+        if not reference:
+            raise CourseError(f"{session['id']} is compared with the reference: give --reference <private-store key>")
+        if not _KEY.match(reference) or ".." in reference or not (private / reference).is_file():
+            raise CourseError(f"{reference} is not in the private store")
+    try:
+        doc = yaml.safe_load(data.decode("utf-8")) if data.strip() else None
+    except (UnicodeDecodeError, yaml.YAMLError) as exc:
+        return [f"The file cannot be read as YAML: {str(exc).splitlines()[0]}."], b"", ""
+    if doc is None:
+        return ["The file is empty."], b"", ""
+    if kind == "question-set":
+        return plain(question_set_errors(doc, root)), data, ".yaml"
+    if kind == "failure-log":
+        return plain(failure_log_errors(doc, load_yaml(catalogue))), data, ".yaml"
+    rows, problems = compare_scores(doc, load_yaml(private / reference), root)
+    comparison = yaml.safe_dump({"recordings": rows}, sort_keys=False).encode("utf-8")
+    return plain(problems), comparison, ".yaml"
+
+
+def _log(private: Path, instructor: str, entry: dict[str, Any]) -> None:
+    path = Path(private) / INTAKE / f"{slug(instructor)}.jsonl"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8", newline="\n") as f:
+        f.write(json.dumps(entry, sort_keys=False) + "\n")
+
+
+def intake_log(private: Path, instructor: str) -> list[dict[str, Any]]:
+    """Every intake for the participant, oldest first."""
+    path = Path(private) / INTAKE / f"{slug(instructor)}.jsonl"
+    if not path.is_file():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def returned(private: Path, instructor: str) -> dict[str, int]:
+    """Session id -> number of problems, for each session not yet recorded whose latest intake was refused."""
+    latest = {e["session"]: e for e in intake_log(private, instructor)}
+    done = read(private, instructor)
+    return {s: len(e.get("problems") or []) for s, e in latest.items() if e["result"] == "refused" and s not in done}
+
+
+def intake(private: Path, instructor: str, session: str, path: Path, on: date, registrations: dict[str, Any],
+           now: datetime, catalogue: Path | None = None, reference: str | None = None, root: Path = ROOT) -> Intake:
+    """Check one file of course evidence with its session's check. A pass stores it under a generated key
+    (evidence/ttt/<slug>-<session>-<sha256[:8]><ext>) and records the session on `on`; a refusal stores and records
+    nothing. Both are logged. Raises CourseError, logging nothing, for what the coordinator must put right first."""
+    private, path = Path(private), Path(path)
+    if not _INSTRUCTOR.match(instructor) or instructor not in registrations:
+        raise CourseError(f"{instructor} is not a registered instructor")
+    found = {s["id"]: s for s in sessions(root)}
+    if session not in found:
+        raise CourseError(f"no session {session!r}; the sessions are {', '.join(found)}")
+    if on > now.date():
+        raise CourseError(f"--on {on} is after today: give the day the session ran")
+    done = read(private, instructor)
+    if session in done:
+        raise CourseError(f"{session} is already recorded for {instructor} on {done[session]['on']}")
+    if not path.is_file():
+        raise CourseError(f"no file {path}")
+    data = path.read_bytes()
+    sha = hashlib.sha256(data).hexdigest()
+    problems, evidence, ext = _check(found[session], path, data, private, catalogue, reference, root)
+    entry: dict[str, Any] = {"at": now.isoformat(), "session": session, "sha256": sha}
+    if problems:
+        _log(private, instructor, {**entry, "result": "refused", "problems": problems})
+        return Intake(stored=False, problems=problems)
+    key = (EVIDENCE / f"{slug(instructor)}-{session}-{sha[:8]}{ext}").as_posix()
+    (private / key).parent.mkdir(parents=True, exist_ok=True)
+    (private / key).write_bytes(evidence)
+    record(private, instructor, session, key, on, registrations, root)
+    _log(private, instructor, {**entry, "result": "stored", "key": key, "on": on.isoformat()})
+    return Intake(stored=True, key=key)

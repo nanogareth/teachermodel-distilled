@@ -597,11 +597,11 @@ while they write.
       a score on remote and inclusive delivery, and a score or "not seen" on every other domain.
 - [ ] Hand them to the coordinator the same day in a closed folder. They hold scores against
       instructor ids: do not photograph them and do not leave them in the room or at a remote spot.
-- [ ] The coordinator scans each participant's forms into the private store under one key and
-      records the session, with the date of the session:
-      `teachermodel course record --instructor tm:instructor/<id> --session remote-delivery --evidence-ref <key> --on <YYYY-MM-DD>`
-- [ ] The coordinator checks it with `teachermodel course status --instructor tm:instructor/<id>`:
-      session 4 now shows a date instead of "missing".
+- [ ] The coordinator scans each participant's forms into one PDF (or PNG or JPEG) and takes it in
+      with the date of the session (decision 0030):
+      `teachermodel course intake <scan> --instructor tm:instructor/<id> --session remote-delivery --on <YYYY-MM-DD>`
+      It stores the scan under a key of its own and records the session; an empty or wrong file is
+      returned with its problems printed, and shows as returned on the coordinator board.
 - [ ] Check once more, the next day, that none of the three calls has a recording or a saved
       transcript in its history.
 - [ ] Keep the paper until the head of training says what happens to it: `standards/retention.yaml`

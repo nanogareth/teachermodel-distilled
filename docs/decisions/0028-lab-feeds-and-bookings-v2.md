@@ -21,7 +21,8 @@ hand with nothing to say a lab was missing.
    `inbox/done/`, refused ones to `inbox/refused/` with their reasons. proving-ground's weekly run drops its status
    feed there when `PROVING_GROUND_FEED_STORE` names a store on that machine, so no one carries the file by hand. It
    is an explicit opt-in: real release results reach a store only after the role surfaces have been tested on
-   generated data (owner, 2026-10-30), never because the store's own variable is set.
+   generated data (owner, 2026-10-30), never because the store's own variable is set. The owner signed the surfaces
+   off on generated data (2026-10-30, "Signed off"); `PROVING_GROUND_FEED_STORE` names the pilot store from then on.
 3. **A lab registry.** `tools/release/checks.json` lists every lab and each command names its lab. The release check
    fails when a scenario folder is not registered or a registered lab has no command.
 4. **bookings@2** requires `exported_at`; the freshness register reads it. `bookings@1` is kept in `contracts/v1/`

@@ -129,13 +129,17 @@ def _build_parser() -> argparse.ArgumentParser:
     sm.add_argument("--region", help="where the programme is, ISO code (IE, US-CA)")
     sm.add_argument("--partner", help="the partner organisation the programme is for, tm:org/<id>")
     sm.add_argument("--all", action="store_true", help="include blocked instructors")
-    co = _store_parser(sub, "course", "the train-the-trainer course record: record a completed session, or show a "
-                                      "participant's sessions (docs/train-the-trainer/DESIGN.md)")
-    co.add_argument("action", choices=["record", "status"])
+    co = _store_parser(sub, "course", "the train-the-trainer course record: take a session's evidence in (check, store, "
+                                      "record), record it by hand, or show a participant's sessions "
+                                      "(docs/train-the-trainer/DESIGN.md, decision 0030)")
+    co.add_argument("action", choices=["intake", "record", "status"])
+    co.add_argument("file", nargs="?", type=Path, help="intake: the evidence file (a scan, or the session's YAML)")
     co.add_argument("--instructor", required=True, help="tm:instructor/<id>")
-    co.add_argument("--session", help="record: a session id from standards/train-the-trainer.yaml")
+    co.add_argument("--session", help="intake, record: a session id from standards/train-the-trainer.yaml")
     co.add_argument("--evidence-ref", help="record: the private-store key of the session's evidence")
-    co.add_argument("--on", help="record: the day, YYYY-MM-DD (default: today)")
+    co.add_argument("--on", help="intake, record: the day the session ran, YYYY-MM-DD")
+    co.add_argument("--catalogue", type=Path, help="intake, lab-facilitation: the lab's staff/catalogue.yaml")
+    co.add_argument("--reference", help="intake, rubric-scoring: the private-store key of the reference scores")
     ing = _store_parser(sub, "ingest", "apply a driver receipt (sign-offs arrive only inside a receipt)")
     ing.add_argument("receipt", type=Path)
     ex = _store_parser(sub, "open-exercise", "open a calibration exercise (head of training): reference scores go to the store")
@@ -335,10 +339,28 @@ def _store_command(args: argparse.Namespace) -> int:
     elif args.cmd == "course":
         from . import course
 
-        if args.action == "record":
+        if args.action == "intake":
+            if not (args.file and args.session and args.on):
+                raise course.CourseError("course intake needs the file, --session and --on (the day the session ran)")
+            got = course.intake(private, args.instructor, args.session, args.file, date.fromisoformat(args.on),
+                                app.load_state(private).registrations, datetime.now(timezone.utc).replace(microsecond=0),
+                                catalogue=args.catalogue, reference=args.reference)
+            if not got.stored:
+                for p in got.problems:
+                    print(p, file=sys.stderr)
+                print(f"course: {args.session} returned: {len(got.problems)} "
+                      f"{'problem' if len(got.problems) == 1 else 'problems'} to send back; nothing stored or recorded")
+                return 1
+            print(f"course: {args.session} stored as {got.key}; recorded on {args.on} for {args.instructor}")
+        elif args.action == "record":
             if not (args.session and args.evidence_ref):
                 raise course.CourseError("course record needs --session and --evidence-ref")
-            on = date.fromisoformat(args.on) if args.on else date.today()
+            if not args.on:
+                raise course.CourseError("course record needs --on, the day the session ran")
+            if ".." in args.evidence_ref or not (private / args.evidence_ref).is_file():
+                raise course.CourseError(f"{args.evidence_ref} is not in the private store; store the evidence "
+                                         "first, or take it in with `course intake`")
+            on = date.fromisoformat(args.on)
             course.record(private, args.instructor, args.session, args.evidence_ref, on,
                           app.load_state(private).registrations)
             print(f"course: {args.session} recorded for {args.instructor} on {on}")

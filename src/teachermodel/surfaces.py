@@ -33,6 +33,7 @@ AUDIENCE = Path("standards") / "audience.yaml"
 AHEAD_DAYS = 21  # how far ahead This week looks for risks (operational default, decision 0002)
 DELIVERED_DAYS = 31  # how far back the coordinator board lists delivered sessions
 COVERED = ("cleared", "cleared_with_conditions")
+OVERRIDE_STEP = "tm:step/override-decision"  # flows/override.py STEP_DECISION; its `due` dates the card
 
 
 class AudienceError(Exception):
@@ -99,6 +100,26 @@ def _clearance(ctx: Context, instructor: str, unit: str, mode: str) -> sqlite3.R
     return best
 
 
+def _open_overrides(ctx: Context) -> list[dict[str, Any]]:
+    """Staffing override requests the head has not decided, for a delivery today or later, oldest request first: when
+    each was asked, when the decision falls due (the workflow's `due` days after it was opened) and its page, if
+    drawn. The requester's note stays in the private store and on the page."""
+    step = next(s for wf in load_standards(ctx.root)["workflows"]["workflows"] for s in wf["steps"]
+                if s["id"] == OVERRIDE_STEP)
+    days = int(step["due"]["days"])
+    out = []
+    for o in _rows(ctx, "SELECT * FROM overrides WHERE decision IS NULL AND date >= ? ORDER BY opened, override",
+                   ctx.on.isoformat()):
+        due = date.fromisoformat(o["opened"]) + timedelta(days=days)
+        pages = sorted((ctx.private / "pages").glob(f"{OVERRIDE_STEP.split('/')[-1]}--{o['override'].split('/')[-1]}"
+                                                    "--*.html"))
+        out.append({"override": o["override"], "instructor": o["instructor"], "unit": o["unit"], "mode": o["mode"],
+                    "date": o["date"], "partner": o["partner"], "region": o["region"], "opened": o["opened"],
+                    "due": due.isoformat(), "overdue": ctx.on > due,
+                    "page": pages[0].relative_to(ctx.private).as_posix() if pages else None})
+    return out
+
+
 # --- the head of training ----------------------------------------------------------------------------------------
 
 
@@ -123,8 +144,11 @@ def this_week(ctx: Context) -> dict[str, Any]:
                   "domains_to_discuss": res.get("domains_to_discuss") or [],
                   "domains": [{"domain": d["domain"], "scores": d["scores"], "average": d["average"]}
                               for d in res.get("domains") or []],
+                  "domains_scored": res.get("domains_scored", len(res.get("domains") or [])),
+                  "not_observable": res.get("not_observable") or [],  # decision 0031
                   "clearance_bar": res.get("clearance_bar") or {}}
                  for aid, rec, res, _, decided in _auditions(ctx) if res and not decided]
+    overrides = _open_overrides(ctx)
     release = next((s for s in ctx.freshness if s.source.id == "release-check"), None)
     lab_state = release.state if release else "not-connected"
     horizon = ctx.on + timedelta(days=AHEAD_DAYS)
@@ -155,7 +179,7 @@ def this_week(ctx: Context) -> dict[str, Any]:
     soon = (ctx.on + timedelta(days=60)).isoformat()
     return {
         "as_of": ctx.now.isoformat(),
-        "decisions": {"quality_triggers": triggers, "auditions": auditions},
+        "decisions": {"quality_triggers": triggers, "auditions": auditions, "overrides": overrides},
         "risks": risks,
         "ahead": sorted(ahead, key=lambda a: (a["from"], a["session"])),
         "release_check": {"state": lab_state, "last": release.last.isoformat() if release and release.last else None,
@@ -183,11 +207,14 @@ def coordinator_board(ctx: Context) -> dict[str, Any]:
                            "received": got[0][0] if got else feed.get("received"),
                            "unreadable": feed.get("unreadable")})
     deliveries.sort(key=lambda d: (d["received"] is not None, d["date"]))  # missing first
-    trained = sorted(p.stem for p in (ctx.private / course_mod.RECORDS).glob("*.yaml"))
+    trained = sorted({p.stem for p in (ctx.private / course_mod.RECORDS).glob("*.yaml")}
+                     | {p.stem for p in (ctx.private / course_mod.INTAKE).glob("*.jsonl")})  # returned, none recorded
     grid = []
     for slug in trained:
         uri = f"tm:instructor/{slug}"
-        grid.append({"instructor": uri, "sessions": [{"session": r["session"], "recorded": r["recorded"]}
+        back = course_mod.returned(ctx.private, uri)  # decision 0030: how many problems, never what they were
+        grid.append({"instructor": uri, "sessions": [{"session": r["session"], "recorded": r["recorded"],
+                                                      "returned": back.get(r["session"], 0)}
                                                      for r in course_mod.status(ctx.private, uri, ctx.root)]})
     auditions = []
     for aid, rec, res, forms, decided in _auditions(ctx):

@@ -377,11 +377,11 @@ forms at each end of the room while they write.
       round, each with an Instructor id, an Observer id and the round written in.
 - [ ] Hand them to the coordinator the same day in a closed folder. The forms hold scores against
       instructor ids: do not photograph them and do not leave them in the room.
-- [ ] The coordinator scans each participant's forms into the private store under one key and
-      records the session:
-      `teachermodel course record --instructor tm:instructor/<id> --session micro-teach --evidence-ref <key> --on <YYYY-MM-DD>`
-- [ ] The coordinator checks it with `teachermodel course status --instructor tm:instructor/<id>`:
-      session 1 now shows a date instead of "missing".
+- [ ] The coordinator scans each participant's forms into one PDF (or PNG or JPEG) and takes it in
+      with the date of the session (decision 0030):
+      `teachermodel course intake <scan> --instructor tm:instructor/<id> --session micro-teach --on <YYYY-MM-DD>`
+      It stores the scan under a key of its own and records the session; an empty or wrong file is
+      returned with its problems printed, and shows as returned on the coordinator board.
 - [ ] Keep the paper until the head of training says what happens to it. The retention schedule
       (`standards/retention.yaml`) has no entry for training forms yet.
 

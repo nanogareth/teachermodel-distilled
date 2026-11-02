@@ -416,6 +416,23 @@ def test_required_evidence_score_left_empty_blocks_download(page, serve, tmp_pat
     assert "required" in page.inner_text("#tm-errors")
 
 
+def test_a_domain_marked_not_observable_saves_with_its_note_and_no_score(page, serve, tmp_path):
+    fields = [{**f, "not_observable": True} for f in pages.evidence_score_fields(STD)]
+    _render(tmp_path, "audition", "approve", step="tm:step/audition-score", subject_uri="tm:audition/a-0123ab",
+            signer=OBSERVER_PERSON, role="clearer", inputs={"unit": "sl:unit/example-agent-loop@1"}, fields=fields,
+            title="Audition", intro="Score what the slice showed.")
+    page.goto(f"{serve}/audition.html")
+    _answer_all_domains(page, skip=DOMAINS[4])
+    page.check(f"#f-{DOMAINS[4]}-no")
+    page.select_option("#tm-decision", "approve")
+    _no_download(page)
+    assert "say why it could not be observed" in page.inner_text("#tm-errors")
+    page.fill(f"#f-{DOMAINS[4]}-note", "No remote learners in the slice.")
+    doc = _save_and_read(page, tmp_path)
+    assert doc["fields"][DOMAINS[4]] == {"not_observable": True, "note": "No remote learners in the slice."}
+    assert doc["fields"][DOMAINS[0]] == {"score": 3, "note": f"Evidence for {DOMAINS[0]}."}
+
+
 def _checklist(tmp_path):
     fields = [
         {"name": "preflight", "label": "Preflight", "kind": "checklist", "required": True, "items": [

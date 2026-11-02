@@ -47,7 +47,7 @@ CREATE TABLE audits (sample TEXT PRIMARY KEY, at TEXT, observation TEXT, observe
 CREATE TABLE cpd (id TEXT PRIMARY KEY, at TEXT, instructor TEXT, logged_on TEXT, hours REAL, domains TEXT);
 CREATE TABLE bench (bench TEXT PRIMARY KEY, instructor TEXT, reason TEXT, opened TEXT, decision TEXT, decided TEXT);
 CREATE TABLE overrides (override TEXT PRIMARY KEY, instructor TEXT, unit TEXT, mode TEXT, date TEXT, partner TEXT,
-                        region TEXT, decision TEXT, decided TEXT);
+                        region TEXT, decision TEXT, decided TEXT, opened TEXT);
 CREATE TABLE signoffs (signoff_id TEXT PRIMARY KEY, at TEXT, step TEXT, subject_uri TEXT, actor TEXT, decision TEXT);
 CREATE TABLE replies (id TEXT PRIMARY KEY, at TEXT, instructor TEXT, decision TEXT, kind TEXT, appeal TEXT,
                       appeal_outcome TEXT, appeal_decided TEXT);
@@ -152,7 +152,7 @@ def _rows(st: app.State) -> dict[str, list[tuple]]:
                              _iso(d.get("at"))))
     for o in records.overrides(log):
         out["overrides"].append((o["override"], o["instructor"], o["unit"], o["mode"], _iso(o["date"]), o.get("partner"),
-                                 o.get("region"), o["decision"], _iso(o["decided"])))
+                                 o.get("region"), o["decision"], _iso(o["decided"]), _iso(o["opened"])))
     return out
 
 

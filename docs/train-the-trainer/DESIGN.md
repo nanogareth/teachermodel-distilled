@@ -28,7 +28,7 @@ Technical depth, the first rubric domain, is not taught here: it is the particip
 
 Each session is 90 minutes, run from a `RUN.md` for the trainer and a `LEARNER.md` for participants (facilitator content never goes in the
 learner's document), and ends in evidence that
-the coordinator records with `teachermodel course record`. Groups are four to six participants and one trainer.
+the coordinator takes in with `teachermodel course intake`, which checks, stores and records it (decision 0030). Groups are four to six participants and one trainer.
 
 | # | Session | Rubric domains | What participants do | Evidence recorded |
 | --- | --- | --- | --- | --- |
@@ -69,6 +69,7 @@ tell a remote completion from an in-room one, and does not need to.
 | --- | --- |
 | This design, and the session list in `standards/train-the-trainer.yaml` | written |
 | `teachermodel course record` / `course status`, and the evidence list on the train-the-trainer sign-off page | built |
+| `teachermodel course intake`: the session's check, a generated key, the record, and the intake log behind the coordinator board's "returned" (decision 0030) | built |
 | Session 1 pack: `01-micro-teach/RUN.md` and `LEARNER.md` | written |
 | Session 2 pack: `02-prior-knowledge/RUN.md` and `LEARNER.md`; `teachermodel check-questions` checks its question set | written, built |
 | Session 3 pack: `03-lab-facilitation/RUN.md` and `LEARNER.md`; `teachermodel check-failure-log` checks its failure log against the lab's catalogue | written, built |

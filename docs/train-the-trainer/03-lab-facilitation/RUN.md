@@ -627,16 +627,11 @@ room while they write.
 - [ ] Give the coordinator the failure log files the same day, by the route the coordinator uses
       for private-store material. Delete your copies once the coordinator confirms they have them.
       Each file is named by instructor id and holds no names.
-- [ ] The coordinator checks each file:
-      `teachermodel check-failure-log <file> --catalogue <proving-ground>/scenarios/aggregates-only-export/staff/catalogue.yaml`.
-      It prints each problem and then "ok" or "N problem(s)", and exits 0 only when the file is well
-      formed. If it lists problems, the coordinator sends the list back to you, and you correct the
-      file from your notes.
-- [ ] Once the check prints "ok", the coordinator stores the file in the private store under one key
-      and records the session, with the date of the session:
-      `teachermodel course record --instructor tm:instructor/<id> --session lab-facilitation --evidence-ref <key> --on <YYYY-MM-DD>`
-- [ ] The coordinator checks it with `teachermodel course status --instructor tm:instructor/<id>`:
-      session 3 now shows a date instead of "missing".
+- [ ] The coordinator takes each file in, with the date of the session (decision 0030):
+      `teachermodel course intake <file> --instructor tm:instructor/<id> --session lab-facilitation --on <YYYY-MM-DD> --catalogue <proving-ground>/scenarios/aggregates-only-export/staff/catalogue.yaml`.
+      It runs the same check as `teachermodel check-failure-log`. A file that passes is stored under a
+      key of its own and the session is recorded. A file with problems is stored nowhere: the problems
+      are printed, the coordinator sends them back to you, and you correct the file from your notes.
 - [ ] Put the catalogue sheets with your copy of this run sheet. Keep the paper until the head of
       training says what happens to it: `standards/retention.yaml` has no entry for training
       evidence yet.

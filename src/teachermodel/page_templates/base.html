@@ -133,6 +133,11 @@ $channel_html
       return;
     }
     if (score === null) { errors.push(f.label + ': choose a score 1 to 4'); return; }
+    if (score === 'no') {
+      if (note === '') { errors.push(f.label + ': not observable: say why it could not be observed'); return; }
+      fields[f.name] = { not_observable: true, note: note };
+      return;
+    }
     if (note === '') { errors.push(f.label + ': evidence note required'); return; }
     v = { score: parseInt(score, 10), note: note };
     if (ts !== '') { v.timestamp = ts; }

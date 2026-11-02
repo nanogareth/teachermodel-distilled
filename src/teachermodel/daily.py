@@ -1,6 +1,7 @@
 """The deterministic daily job (owner, 2026-10-27): `teachermodel daily`, its development toggle and its Windows task.
 
-`daily` imports any feed files dropped in the store's `inbox/` (feeds.py, decision 0028), ticks the store and logs each to `logs/daily.log`, the tick's line last. With
+`daily` imports any feed files dropped in the store's `inbox/` (feeds.py, decision 0028), ticks the store, rebuilds the read views (views.build: the monthly outcomes, quality
+review, clearance matrix and coaching logs, so they never go stale) and logs each to `logs/daily.log`, the tick's line last. With
 `dev_autosign: true` in the settings (a pilot store only, settings@1) it runs `dev-autosign` instead, which ticks before and after it signs. No model runs here:
 with `TEACHERMODEL_M365_DRIVER=graph` in the environment it first reads the sign-off mailbox through the Graph driver
 (graph.py) and ingests the receipt. Without it the mailbox is read by the connector skill in a Claude session (the
@@ -19,7 +20,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import app, devsign, feeds, graph, setup
+from . import app, devsign, feeds, graph, setup, views
 from .standards import ROOT
 
 LOG = Path("logs") / "daily.log"
@@ -48,6 +49,10 @@ def daily(private_dir: Path | str, *, now: datetime | None = None, root: Path = 
         reports = app.do_tick(private, now=now, root=root)
         mode, rep = "tick", app.Report(lines=[r.summary for r in reports[:-1]], summary=reports[-1].summary,
                                        ok=all(r.ok for r in reports))
+    try:
+        built = views.build(private, root=root)
+    except Exception as exc:  # logged as FAILED, never in the tick's way
+        built = app.Report(summary=f"{exc.__class__.__name__}: {exc}", ok=False)
     log = private / LOG
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("a", encoding="utf-8", newline="\n") as f:
@@ -55,7 +60,9 @@ def daily(private_dir: Path | str, *, now: datetime | None = None, root: Path = 
             f.write(f"{now.isoformat(timespec='seconds')} inbox {'ok' if inbox.ok else 'FAILED'}: {inbox.summary}\n")
         if read is not None:
             f.write(f"{now.isoformat(timespec='seconds')} graph-read {'ok' if read.ok else 'FAILED'}: {read.summary}\n")
+        f.write(f"{now.isoformat(timespec='seconds')} views {'ok' if built.ok else 'FAILED'}: {built.summary}\n")
         f.write(f"{now.isoformat(timespec='seconds')} {mode} {'ok' if rep.ok else 'FAILED'}: {rep.summary}\n")
+    rep = app.Report(lines=[*rep.lines, built.summary], summary=rep.summary, ok=rep.ok and built.ok)
     if read is not None:
         rep = app.Report(lines=[*read.all_lines(), *rep.lines], summary=rep.summary, ok=rep.ok and read.ok)
     if arrived:

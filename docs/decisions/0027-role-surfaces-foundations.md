@@ -1,7 +1,8 @@
 # 0027: Session schedule as an input, a freshness register, and an audience policy
 
 Date: 2026-10-30. Status: accepted (owner, 2026-10-30). The built foundations (G1, G9, G11 in 5205b2b) were signed off
-by the owner on 2026-10-30 ("Signed off") before the feeds and pages were built on them (decision 0028).
+by the owner on 2026-10-30 ("Signed off") before the feeds and pages were built on them (decision 0028). The override
+card on This week (d61c5b1) and the monthly outcomes columns (0d97734) passed review on generated data (owner, 2026-11-01, "Signed off", relayed by the role-surfaces session after phone-width screenshots).
 
 ## Context
 

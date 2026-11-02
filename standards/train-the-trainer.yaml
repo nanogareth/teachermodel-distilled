@@ -1,5 +1,6 @@
 # The train-the-trainer course (docs/train-the-trainer/DESIGN.md): its sessions and the evidence each one records.
 # Read by `teachermodel course` and by the W1 train-the-trainer sign-off page. Ids are stable; titles may change.
+# `check` picks what `course intake` runs on the evidence (decision 0030): scan, question-set, failure-log or scores.
 schema_version: 1
 id: tm:course/train-the-trainer
 sessions:
@@ -7,19 +8,24 @@ sessions:
     title: Micro-teach rounds
     domains: [technical-depth, prior-knowledge, conceptual-questioning, lab-facilitation]  # remote-inclusive: session 4
     evidence: Both rounds' rubric forms
+    check: scan
   - id: prior-knowledge
     title: Diagnosing prior knowledge
     domains: [prior-knowledge, conceptual-questioning]
     evidence: The diagnostic question set, in the unit's pre_check shape
+    check: question-set
   - id: lab-facilitation
     title: Lab facilitation and recovery
     domains: [lab-facilitation]
     evidence: The injected failure and how it was handled
+    check: failure-log
   - id: remote-delivery
     title: Remote and inclusive delivery
     domains: [remote-inclusive]
     evidence: The remote round's rubric form
+    check: scan
   - id: rubric-scoring
     title: Seeing teaching through the rubric
     domains: [technical-depth, prior-knowledge, conceptual-questioning, lab-facilitation, remote-inclusive]
     evidence: Scores of two reference recordings against the reference
+    check: scores

@@ -409,6 +409,32 @@ def test_evidence_score_accepts_a_prefill():
     assert f["value"] == {"score": 3, "note": "Asked a probing question."}
 
 
+def test_evidence_score_may_offer_not_observable_with_its_own_id():
+    plain = pages._normalise_field(_field(kind="evidence_score"))
+    assert "not_observable" not in plain  # a field without the flag is unchanged
+    f = pages._normalise_field(_field(kind="evidence_score", not_observable=True))
+    assert f["not_observable"] is True and "f-x-no" in pages._element_ids(f)
+    html = pages._field_html(f)
+    assert 'id="f-x-no"' in html and 'value="no"' in html and "Not observable in this slice" in html
+    assert 'id="f-x-no"' not in pages._field_html(plain)
+
+
+@pytest.mark.parametrize("value, ok", [
+    ({"not_observable": True, "note": "No remote learners in the slice."}, True),
+    ({"not_observable": True, "note": ""}, False),
+    ({"not_observable": True, "score": 3, "note": "x"}, False),
+])
+def test_a_not_observable_prefill_needs_its_note_and_no_score(value, ok):
+    spec = _field(kind="evidence_score", not_observable=True, value=value)
+    if ok:
+        assert pages._normalise_field(spec)["value"] == value
+    else:
+        with pytest.raises(ValueError):
+            pages._normalise_field(spec)
+    with pytest.raises(ValueError):  # without the flag, not observable is no answer
+        pages._normalise_field(_field(kind="evidence_score", value={"not_observable": True, "note": "x"}))
+
+
 def test_checklist_renders_a_pass_fail_pair_and_a_note_per_item():
     page, _ = build("checklist")
     for item in ("keys-scoped", "model-pinned", "fallback-ready"):

@@ -525,15 +525,13 @@ room while they write.
       evidence for this session.
 - [ ] Each participant sends their question set file to the coordinator within two working days.
       The file holds no names: no participant's, no peer's and no learner's.
-- [ ] The coordinator checks each file with `teachermodel check-questions <file>`. It prints each
-      problem and then "ok" or "N problem(s)", and exits 0 only when the file is well formed. If it
-      lists problems, the coordinator sends the list back to the participant, and the participant
-      sends a corrected file.
-- [ ] Once the check prints "ok", the coordinator stores the file in the private store under one key
-      and records the session, with the date of the session, not the date the file arrived:
-      `teachermodel course record --instructor tm:instructor/<id> --session prior-knowledge --evidence-ref <key> --on <YYYY-MM-DD>`
-- [ ] The coordinator checks it with `teachermodel course status --instructor tm:instructor/<id>`:
-      session 2 now shows a date instead of "missing".
+- [ ] The coordinator takes each file in, with the date of the session, not the date the file
+      arrived (decision 0030):
+      `teachermodel course intake <file> --instructor tm:instructor/<id> --session prior-knowledge --on <YYYY-MM-DD>`
+      It runs the same check as `teachermodel check-questions`. A file that passes is stored under a
+      key of its own and the session is recorded. A file with problems is stored nowhere: the problems
+      are printed in plain words ("Question 2, option C: say which wrong idea this answer shows"), the
+      coordinator sends them back to the participant, and the participant sends a corrected file.
 - [ ] The coordinator sends every `proposed_misconception` statement, without the file it came from,
       to the owner of that unit, who decides whether to add it to the unit's list.
 

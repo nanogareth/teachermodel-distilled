@@ -537,12 +537,13 @@ ref-a: missing remote-inclusive
 ref-c: not in the reference (ref-a, ref-b)
 3 problem(s)
 ```
-- [ ] The comparison file is the evidence. It holds the participant's scores and the reference, so
-      it stays in the private store. The coordinator stores it under one key, deletes the typed
-      scores file, and records the session with the date of the session:
-      `teachermodel course record --instructor tm:instructor/<id> --session rubric-scoring --evidence-ref <key> --on <YYYY-MM-DD>`
-- [ ] The coordinator checks it with `teachermodel course status --instructor tm:instructor/<id>`:
-      session 5 now shows a date instead of "missing".
+- [ ] The comparison is the evidence. It holds the participant's scores and the reference, so it
+      stays in the private store. The coordinator takes the scores file in, with the date of the
+      session (decision 0030):
+      `teachermodel course intake <scores file> --instructor tm:instructor/<id> --session rubric-scoring --on <YYYY-MM-DD> --reference <reference key>`
+      It runs the same comparison, stores the comparison (not the typed scores) under a key of its
+      own and records the session; a file with problems is stored nowhere and its problems are
+      printed as above. The coordinator then deletes the typed scores file.
 - [ ] Keep the paper forms until the head of training says what happens to them:
       `standards/retention.yaml` has no entry for training evidence yet.
 

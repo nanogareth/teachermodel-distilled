@@ -1,7 +1,8 @@
 """`teachermodel course` (course.py) and the W1 train-the-trainer sign-off page that lists the course record
 (docs/train-the-trainer/DESIGN.md). One-week simulated store, generated data only."""
 
-from datetime import date
+import hashlib
+from datetime import date, datetime, timezone
 
 import pytest
 import yaml
@@ -172,10 +173,167 @@ def test_the_sign_off_page_exists_only_once_every_session_is_recorded_and_binds_
 
 def test_the_command_records_and_shows(store, capsys):
     who = sorted(app.load_state(store).registrations)[2]
-    assert cli.main(["course", "record", "--private-dir", str(store), "--instructor", who, "--session", "remote-delivery",
-                     "--evidence-ref", "evidence/ttt/remote.pdf", "--on", "2026-10-22"]) == 0
+    record = ["course", "record", "--private-dir", str(store), "--instructor", who, "--session", "remote-delivery",
+              "--evidence-ref", "evidence/ttt/remote.pdf"]
+    assert cli.main(record + ["--on", "2026-10-22"]) == 1  # the key names nothing in the store
+    assert "evidence/ttt/remote.pdf is not in the private store" in capsys.readouterr().err
+    (store / "evidence" / "ttt").mkdir(parents=True, exist_ok=True)
+    (store / "evidence" / "ttt" / "remote.pdf").write_bytes(b"%PDF-1.7\n")
+    assert cli.main(record) == 1  # no default date: the session's, never the day it is typed
+    assert "--on" in capsys.readouterr().err
+    assert cli.main(record + ["--on", "2026-10-22"]) == 0
     assert cli.main(["course", "status", "--private-dir", str(store), "--instructor", who]) == 0
     out = capsys.readouterr().out
     assert "2026-10-22  remote-delivery" in out and "1 of 5 sessions recorded" in out
     assert cli.main(["course", "record", "--private-dir", str(store), "--instructor", who]) == 1
     assert "--session and --evidence-ref" in capsys.readouterr().err
+
+
+# --- intake (decision 0030): the session picks the check; a pass stores and records, a refusal is logged ----------
+
+NOW = datetime(2026, 10, 23, 16, 0, tzinfo=timezone.utc)
+ON = date(2026, 10, 22)
+
+
+def _who(store, n):
+    return sorted(app.load_state(store).registrations)[n]
+
+
+def _intake(store, who, session, path, on=ON, **kw):
+    return course.intake(store, who, session, path, on, app.load_state(store).registrations, NOW, **kw)
+
+
+def _yaml(tmp_path, name, doc):
+    path = tmp_path / name
+    path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+    return path
+
+
+def test_a_scan_that_passes_is_stored_under_a_generated_key_and_recorded_on_the_session_day(store, tmp_path):
+    who = _who(store, 3)
+    scan = tmp_path / "Round forms (Ana).pdf"
+    scan.write_bytes(b"%PDF-1.7\n1 0 obj\n")
+    sha = hashlib.sha256(scan.read_bytes()).hexdigest()
+    got = _intake(store, who, "micro-teach", scan)
+    assert got.stored and got.problems == []
+    assert got.key == f"evidence/ttt/{who.split('/')[-1]}-micro-teach-{sha[:8]}.pdf"  # never the file's own name
+    assert (store / got.key).read_bytes() == scan.read_bytes()
+    assert course.read(store, who)["micro-teach"] == {"on": "2026-10-22", "evidence_ref": got.key}
+    assert course.intake_log(store, who) == [{"at": NOW.isoformat(), "session": "micro-teach", "sha256": sha,
+                                              "result": "stored", "key": got.key, "on": "2026-10-22"}]
+
+
+@pytest.mark.parametrize("name, data, problem", [
+    ("forms.pdf", b"", "The file is empty."),
+    ("forms.docx", b"PK\x03\x04", "A scan is a PDF, PNG or JPEG file; this one is .docx."),
+    ("forms.pdf", b"\x89PNG\r\n\x1a\n", "The file is named .pdf but is not a PDF."),
+    ("forms.jpg", b"%PDF-1.7", "The file is named .jpg but is not a JPEG."),
+])
+def test_a_scan_that_is_not_one_is_refused(name, data, problem):
+    assert course.scan_errors(name, data) == [problem]
+
+
+def test_a_refused_question_set_stores_nothing_records_nothing_and_says_what_to_fix(store, tmp_path):
+    who = _who(store, 4)
+    item = QUESTIONS["pre_check"][0]
+    bad = {"unit": QUESTIONS["unit"], "pre_check": [
+        {**item, "options": item["options"][:2]},
+        {**item, "options": item["options"][:2] + [{"text": "The loop times out"}]}]}
+    path = _yaml(tmp_path, "questions.yaml", bad)
+    got = _intake(store, who, "prior-knowledge", path)
+    assert not got.stored and got.key is None
+    assert got.problems == [
+        "Question 1: needs 3 to 5 options, has 2.",
+        "Question 2, option C: say which wrong idea this answer shows (a misconception id from the unit, "
+        "or proposed_misconception)."]
+    assert "prior-knowledge" not in course.read(store, who)
+    assert not list((store / "evidence" / "ttt").glob(f"{who.split('/')[-1]}-prior-knowledge-*"))
+    entry = course.intake_log(store, who)[-1]
+    assert entry == {"at": NOW.isoformat(), "session": "prior-knowledge",
+                     "sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "result": "refused",
+                     "problems": got.problems}
+    assert course.returned(store, who) == {"prior-knowledge": 2}
+    (tmp_path / "broken.yaml").write_text("pre_check: [\n", encoding="utf-8")
+    unreadable = _intake(store, who, "prior-knowledge", tmp_path / "broken.yaml")
+    assert len(unreadable.problems) == 1 and unreadable.problems[0].startswith("The file cannot be read as YAML")
+    assert course.returned(store, who) == {"prior-knowledge": 1}  # the latest refusal counts
+    fixed = _intake(store, who, "prior-knowledge", _yaml(tmp_path, "fixed.yaml", QUESTIONS))
+    assert fixed.stored and fixed.key.endswith(".yaml")
+    assert yaml.safe_load((store / fixed.key).read_text(encoding="utf-8")) == QUESTIONS
+    assert course.returned(store, who) == {}  # recorded now, so no longer sent back
+    assert [e["result"] for e in course.intake_log(store, who)] == ["refused", "refused", "stored"]  # appended
+
+
+def test_a_failure_log_is_checked_against_the_catalogue_it_is_given(store, tmp_path):
+    who = _who(store, 5)
+    log = _yaml(tmp_path, "log.yaml", LOG)
+    with pytest.raises(course.CourseError, match="--catalogue"):
+        _intake(store, who, "lab-facilitation", log)
+    assert course.intake_log(store, who) == []  # a missing option is the operator's slip, not the participant's
+    refused = _intake(store, who, "lab-facilitation", _yaml(tmp_path, "bad.yaml", {**LOG, "failure": "wifi-down"}),
+                      catalogue=_yaml(tmp_path, "catalogue.yaml", CATALOGUE))
+    assert refused.problems == ["failure: wifi-down is not in the catalogue (room-unreachable, stale-room-code)."]
+    got = _intake(store, who, "lab-facilitation", log, catalogue=tmp_path / "catalogue.yaml")
+    assert got.stored and yaml.safe_load((store / got.key).read_text(encoding="utf-8")) == LOG
+
+
+def test_session_5_stores_the_comparison_not_the_typed_scores(store, tmp_path):
+    who = _who(store, 6)
+    (store / "reference").mkdir(exist_ok=True)
+    (store / "reference" / "ttt-rubric.yaml").write_text(yaml.safe_dump(REFERENCE), encoding="utf-8")
+    mine = _yaml(tmp_path, "scores.yaml", MINE)
+    with pytest.raises(course.CourseError, match="--reference"):
+        _intake(store, who, "rubric-scoring", mine)
+    with pytest.raises(course.CourseError, match="reference/none.yaml is not in the private store"):
+        _intake(store, who, "rubric-scoring", mine, reference="reference/none.yaml")
+    got = _intake(store, who, "rubric-scoring", mine, reference="reference/ttt-rubric.yaml")
+    assert got.stored and got.key.endswith(".yaml")
+    assert yaml.safe_load((store / got.key).read_text(encoding="utf-8")) == {
+        "recordings": course.compare_scores(MINE, REFERENCE)[0]}
+    assert course.intake_log(store, who)[-1]["sha256"] == hashlib.sha256(mine.read_bytes()).hexdigest()
+
+
+def test_an_intake_the_coordinator_cannot_make_is_an_error_and_logs_nothing(store, tmp_path):
+    who = _who(store, 8)
+    scan = tmp_path / "forms.pdf"
+    scan.write_bytes(b"%PDF-1.7\n")
+    assert _intake(store, who, "micro-teach", scan).stored  # its own record: the suite runs tests in any order
+    before = course.intake_log(store, who)
+    for kwargs, match in [
+        ({"session": "micro-teach"}, "already recorded"),
+        ({"session": "juggling"}, "no session"),
+        ({"session": "remote-delivery", "on": date(2026, 10, 24)}, "after today"),
+        ({"session": "remote-delivery", "who": "tm:instructor/nobody"}, "not a registered instructor")]:
+        with pytest.raises(course.CourseError, match=match):
+            _intake(store, kwargs.get("who", who), kwargs["session"], scan, on=kwargs.get("on", ON))
+    with pytest.raises(course.CourseError, match="no file"):
+        _intake(store, who, "remote-delivery", tmp_path / "absent.pdf")
+    assert course.intake_log(store, who) == before
+
+
+def test_every_session_names_a_known_check(tmp_path):
+    assert [s["check"] for s in course.sessions()] == ["scan", "question-set", "failure-log", "scan", "scores"]
+    (tmp_path / "standards").mkdir()
+    (tmp_path / "standards" / "framework.yaml").write_text("domains: [{id: lab-facilitation}]\n", encoding="utf-8")
+    (tmp_path / "standards" / "train-the-trainer.yaml").write_text(yaml.safe_dump({"sessions": [
+        {"id": "a", "title": "A", "domains": ["lab-facilitation"], "evidence": "x", "check": "vibes"}]}),
+        encoding="utf-8")
+    with pytest.raises(course.CourseError, match="session a: check vibes"):
+        course.sessions(tmp_path)
+
+
+def test_the_intake_command_stores_or_returns_with_problems(store, tmp_path, capsys):
+    who = _who(store, 7)
+    scan = tmp_path / "remote.png"
+    scan.write_bytes(b"\x89PNG\r\n\x1a\n....")
+    base = ["course", "intake", "--private-dir", str(store), "--instructor", who, "--session", "remote-delivery"]
+    assert cli.main(base + [str(scan)]) == 1
+    assert "--on" in capsys.readouterr().err
+    empty = tmp_path / "empty.png"
+    empty.write_bytes(b"")
+    assert cli.main(base + [str(empty), "--on", "2026-10-22"]) == 1
+    captured = capsys.readouterr()
+    assert "The file is empty." in captured.err and "returned: 1 problem" in captured.out
+    assert cli.main(base + [str(scan), "--on", "2026-10-22"]) == 0
+    out = capsys.readouterr().out
+    assert f"stored as evidence/ttt/{who.split('/')[-1]}-remote-delivery-" in out and "recorded on 2026-10-22" in out
