@@ -122,3 +122,18 @@ def test_the_command_prints_and_refuses_a_bad_mode(store, capsys):
     assert cli.main(["staffing-match", "--private-dir", str(store), "--unit", UNIT, "--mode", "online",
                      "--from", "2026-11-03", "--to", "2026-11-05"]) == 1
     assert "mode must be" in capsys.readouterr().err
+
+
+def test_bookings_at_2_carry_an_export_date_and_at_1_is_still_read(tmp_path):
+    one = {"instructor": "tm:instructor/a1c4f", "ref": "prog-x", "from": "2026-11-04", "to": "2026-11-05",
+           "region": "IE", "travel": True}
+    (tmp_path / "inputs").mkdir()
+    path = tmp_path / matching.BOOKINGS
+    path.write_text(yaml.safe_dump({"schema": "tm:contract/bookings@2", "exported_at": "2026-10-28T07:00:00Z",
+                                    "bookings": [one]}), encoding="utf-8")
+    assert [b.ref for b in matching.load_bookings(tmp_path, {"simulated": True})] == ["prog-x"]
+    path.write_text(yaml.safe_dump({"schema": "tm:contract/bookings@2", "bookings": [one]}), encoding="utf-8")
+    with pytest.raises(matching.MatchError, match="bookings@2"):
+        matching.load_bookings(tmp_path, {"simulated": True})
+    path.write_text(yaml.safe_dump({"schema": "tm:contract/bookings@1", "bookings": [one]}), encoding="utf-8")
+    assert matching.load_bookings(tmp_path, {"simulated": True})

@@ -13,9 +13,10 @@ instructor would spend travelling: the days of their bookings marked as travel, 
 in person or hybrid and in a region the instructor is not registered in. Above `staffing.travel_flag_share` it is flagged.
 Both are operational defaults (decision 0026).
 
-Bookings come from inputs/bookings.yaml in the private store (tm:contract/bookings@1). They say where people will be, so a
-store that is not simulated refuses to read them until standards/retention.yaml has an entry for the `booking-records`
-category (decision 0026); without them the view still answers who may teach, and says it has no bookings.
+Bookings come from inputs/bookings.yaml in the private store (tm:contract/bookings@2; @1, without an export date, is
+still read). They say where people will be, so a store that is not simulated refuses to read them until
+standards/retention.yaml has an entry for the `booking-records` category (decision 0026); without them the view still
+answers who may teach, and says it has no bookings.
 """
 
 from __future__ import annotations
@@ -34,6 +35,8 @@ from .standards import ROOT, load_schema, load_yaml
 from .util import esc, write_if_changed
 
 BOOKINGS = Path("inputs") / "bookings.yaml"
+CURRENT = "tm:contract/bookings@2"  # @2 adds exported_at (decision 0028); @1 files are still read
+SCHEMAS = {CURRENT: "bookings.schema.json", "tm:contract/bookings@1": "v1/bookings.schema.json"}
 VIEW = Path("views") / "staffing-match.html"
 CATEGORY = "booking-records"
 ORDER = {"ok": 0, "warn": 1, "block": 2}
@@ -90,10 +93,12 @@ def load_bookings(private: Path, settings: Mapping[str, Any], root: Path = ROOT)
     if reason := gate(settings, root):
         raise MatchError(reason)
     doc = yaml.safe_load(path.read_text(encoding="utf-8"))
-    errors = sorted(Draft202012Validator(load_schema("bookings.schema.json", root)).iter_errors(doc), key=str)
+    version = SCHEMAS.get(doc.get("schema") if isinstance(doc, dict) else None, SCHEMAS[CURRENT])
+    errors = sorted(Draft202012Validator(load_schema(version, root)).iter_errors(doc), key=str)
     if errors:
         where = "/".join(str(p) for p in errors[0].absolute_path) or "the file"
-        raise MatchError(f"{BOOKINGS.as_posix()}: {where} does not fit tm:contract/bookings@1 ({len(errors)} problem(s))")
+        contract = doc["schema"] if version != SCHEMAS[CURRENT] else CURRENT
+        raise MatchError(f"{BOOKINGS.as_posix()}: {where} does not fit {contract} ({len(errors)} problem(s))")
     out = []
     for b in doc["bookings"]:
         start, end = date.fromisoformat(b["from"]), date.fromisoformat(b["to"])

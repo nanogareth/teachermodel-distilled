@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/schedule@1",
+  "title": "Session schedule (private store inputs/schedule.yaml)",
+  "description": "What a calendar export lists for the role surfaces (decision 0027): per session, its programme, unit and lab, mode, dates, region, the instructors and observer, and the learners expected. Kept in the private store as an input, never an event. A ref names a session or programme, never a client or a person.",
+  "type": "object",
+  "required": ["schema", "exported_at", "sessions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/schedule@1"},
+    "exported_at": {"type": "string", "format": "date-time", "description": "When the calendar was exported: the freshness register reads it"},
+    "sessions": {"type": "array", "items": {"$ref": "#/$defs/session"}}
+  },
+  "$defs": {
+    "ref": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "instructor": {"type": "string", "pattern": "^tm:instructor/[a-z0-9][a-z0-9-]*$"},
+    "date": {"type": "string", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "session": {
+      "type": "object",
+      "required": ["ref", "programme", "unit", "mode", "from", "to", "region", "lead", "expected_learners", "status"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": {"$ref": "#/$defs/ref"},
+        "programme": {"$ref": "#/$defs/ref"},
+        "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+        "lab": {"anyOf": [{"$ref": "#/$defs/ref"}, {"type": "null"}], "description": "A proving-ground scenario slug, when the session runs a lab"},
+        "mode": {"enum": ["in-person", "remote", "hybrid"]},
+        "from": {"$ref": "#/$defs/date"},
+        "to": {"$ref": "#/$defs/date"},
+        "region": {"type": "string", "pattern": "^[A-Z]{2}(-[A-Z0-9]{1,3})?$"},
+        "lead": {"$ref": "#/$defs/instructor"},
+        "co": {"type": "array", "items": {"$ref": "#/$defs/instructor"}},
+        "observer": {"anyOf": [{"$ref": "#/$defs/instructor"}, {"type": "null"}]},
+        "expected_learners": {"type": "integer", "minimum": 0},
+        "status": {"enum": ["held", "confirmed", "cancelled"]}
+      }
+    }
+  }
+}

@@ -1,13 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "tm:contract/bookings@1",
+  "$id": "tm:contract/bookings@2",
   "title": "Instructor bookings (private store inputs/bookings.yaml)",
-  "description": "What a calendar or travel tool exports for the staffing matching view (decision 0026): per booking, the instructor, a programme reference, the dates, the region and whether it means travel. Kept in the private store, read only by `teachermodel staffing-match`, never an event. The reference names a programme, never a client or a person.",
+  "description": "What a calendar or travel tool exports for the staffing matching view (decision 0026): per booking, the instructor, a programme reference, the dates, the region and whether it means travel. Kept in the private store, read only by `teachermodel staffing-match` and the role surfaces, never an event. The reference names a programme, never a client or a person. @2 adds exported_at, which the freshness register reads (decision 0028); @1 files (contracts/v1/) are still read.",
   "type": "object",
-  "required": ["schema", "bookings"],
+  "required": ["schema", "exported_at", "bookings"],
   "additionalProperties": false,
   "properties": {
-    "schema": {"const": "tm:contract/bookings@1"},
+    "schema": {"const": "tm:contract/bookings@2"},
+    "exported_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}", "description": "When the calendar or travel tool was exported"},
     "bookings": {"type": "array", "items": {"$ref": "#/$defs/booking"}}
   },
   "$defs": {

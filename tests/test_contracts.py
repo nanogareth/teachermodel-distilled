@@ -47,7 +47,7 @@ def test_staffing_request_rejects_module_refs():
     assert list(v.iter_errors({**REQ, "unit": "tm:module/x"}))
 
 
-@pytest.mark.parametrize("name", ["staffing-check", "observation", "roster"])
+@pytest.mark.parametrize("name", ["staffing-check", "observation", "roster", "bookings"])
 def test_ids_are_v2_and_v1_kept(name):
     new = json.loads((ROOT / "contracts" / f"{name}.schema.json").read_text(encoding="utf-8"))
     old = json.loads((ROOT / "contracts" / "v1" / f"{name}.schema.json").read_text(encoding="utf-8"))
@@ -120,6 +120,7 @@ V1_SHA256 = {
     "roster.schema.json": "eca2b5c3904acd4c31f5d378c65db04927ce28275ca28b35add284f3debf2f74",
     "staffing-check.schema.json": "d758f50bd7cb24697b50945e09a6e6db1df4505c5a12e79ec570527166796726",
     "retention.schema.json": "4fdfa62b47213755888733d0cb38e720bc8eeeb318b67ebe522a0382e6315d40",
+    "bookings.schema.json": "ba3971d75c505de2b058682b1ff3760ef6e8544c226b7420927092e9a2122a29",
 }
 
 

@@ -14,6 +14,8 @@ from . import app, config, daily, devsign, events, pilot, roster, setup, staffin
 from .audition import AuditionError
 from .course import CourseError
 from .matching import MatchError
+from .feeds import FeedError
+from .schedule import ScheduleError
 from .flows.bench import BenchError, request_bench
 from .flows.calibration import ExerciseError, open_exercise
 from .flows.override import OverrideError, request_override
@@ -109,6 +111,12 @@ def _build_parser() -> argparse.ArgumentParser:
     au.add_argument("--by", help="decide: the panel chair, tm:person/<id>")
     au.add_argument("--instructor", help="carry: the hired candidate's tm:instructor/<id>, once registered")
     au.add_argument("--on", help="the day, YYYY-MM-DD (default: today)")
+    sch = _store_parser(sub, "import-schedule", "check a calendar export of sessions (tm:contract/schedule@1) and keep "
+                                                 "it as inputs/schedule.yaml (decision 0027)")
+    sch.add_argument("file", type=Path)
+    fd = _store_parser(sub, "import-feed", "check a lab feed (tm:contract/release-status@1 or results-received@1) and "
+                                           "keep it under inputs/ (decision 0028); the daily job also drains inbox/")
+    fd.add_argument("file", type=Path)
     sm = _store_parser(sub, "staffing-match", "who may teach a unit in a mode on a programme's dates, who is free and "
                                               "their travel load (decision 0026); writes views/staffing-match.html")
     sm.add_argument("--unit", required=True)
@@ -296,6 +304,16 @@ def _store_command(args: argparse.Namespace) -> int:
         return staffing.EXIT_CODES[response["verdict"]]
     elif args.cmd == "ingest":
         return _finish(app.do_ingest(private, args.receipt))
+    elif args.cmd == "import-schedule":
+        from . import schedule
+
+        got = schedule.import_schedule(private, args.file, setup.load_settings(private))
+        print(f"import-schedule: {len(got.sessions)} session(s), exported {got.exported_at}")
+    elif args.cmd == "import-feed":
+        from . import feeds
+
+        got = feeds.import_feed(private, args.file)
+        print(f"import-feed: {got.schema} of {got.at} kept as {got.path.relative_to(private).as_posix()}")
     elif args.cmd == "staffing-match":
         from . import matching
 
@@ -434,7 +452,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return _store_command(args)
     except (config.ConfigError, setup.SetupError, app.AppError, pilot.PilotError, devsign.DevSignError, ExerciseError,
-            QualityError, BenchError, OverrideError, AuditionError, MatchError, CourseError) as exc:
+            QualityError, BenchError, OverrideError, AuditionError, MatchError, CourseError, ScheduleError,
+            FeedError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

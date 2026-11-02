@@ -16,6 +16,8 @@ teachermodel validate              # schema + cross-checks on standards/
 teachermodel verify-events <path>  # schema, receipts, duplicate ids in an event log
 teachermodel staffing-check --instructor <uri> --unit <uri> --mode <mode> --date <YYYY-MM-DD>  # exit 0 ok, 3 warn, 2 block, 1 refused
 teachermodel staffing-match --unit <uri> --mode <mode> --from <day> --to <day> [--region IE]  # who may teach, who is free, travel (0026)
+teachermodel import-schedule <file>  # a calendar export of sessions (schedule@1) kept as inputs/schedule.yaml (0027)
+teachermodel import-feed <file>    # a lab feed (release-status@1, results-received@1) kept under inputs/; daily drains inbox/ (0028)
 teachermodel check-roster <path>   # roster file against tm:contract/roster@1
 teachermodel revoke-page --step <id> [--subject <uri>]  # a page to revoke an approval in force (0019)
 teachermodel gates                 # phase gates and acceptance criteria computed from the store (read only)

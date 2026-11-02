@@ -1,6 +1,7 @@
 """The deterministic daily job (owner, 2026-10-27): `teachermodel daily`, its development toggle and its Windows task.
 
-`daily` ticks the store and appends one line to `logs/daily.log` in it. With `dev_autosign: true` in the settings (a
+`daily` imports any feed files dropped in the store's `inbox/` (feeds.py, decision 0028), ticks the store and appends
+one line to `logs/daily.log` in it. With `dev_autosign: true` in the settings (a
 pilot store only, settings@1) it runs `dev-autosign` instead, which ticks before and after it signs. No model runs here:
 with `TEACHERMODEL_M365_DRIVER=graph` in the environment it first reads the sign-off mailbox through the Graph driver
 (graph.py) and ingests the receipt. Without it the mailbox is read by the connector skill in a Claude session (the
@@ -19,7 +20,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import app, devsign, graph, setup
+from . import app, devsign, feeds, graph, setup
 from .standards import ROOT
 
 LOG = Path("logs") / "daily.log"
@@ -33,6 +34,9 @@ def daily(private_dir: Path | str, *, now: datetime | None = None, root: Path = 
     private = Path(private_dir)
     now = now or datetime.now(timezone.utc).replace(microsecond=0)
     settings = setup.load_settings(private)
+    arrived = feeds.drain_inbox(private, root)
+    refused = sum(": refused: " in line for line in arrived)
+    inbox = app.Report(lines=arrived, summary=f"{len(arrived) - refused} kept, {refused} refused", ok=not refused)
     read = None
     if os.environ.get(graph.ENV_DRIVER, "").strip() == "graph":
         try:
@@ -48,11 +52,15 @@ def daily(private_dir: Path | str, *, now: datetime | None = None, root: Path = 
     log = private / LOG
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("a", encoding="utf-8", newline="\n") as f:
+        if arrived:
+            f.write(f"{now.isoformat(timespec='seconds')} inbox {'ok' if inbox.ok else 'FAILED'}: {inbox.summary}\n")
         if read is not None:
             f.write(f"{now.isoformat(timespec='seconds')} graph-read {'ok' if read.ok else 'FAILED'}: {read.summary}\n")
         f.write(f"{now.isoformat(timespec='seconds')} {mode} {'ok' if rep.ok else 'FAILED'}: {rep.summary}\n")
     if read is not None:
         rep = app.Report(lines=[*read.all_lines(), *rep.lines], summary=rep.summary, ok=rep.ok and read.ok)
+    if arrived:
+        rep = app.Report(lines=[*arrived, *rep.lines], summary=rep.summary, ok=rep.ok and inbox.ok)
     return rep
 
 

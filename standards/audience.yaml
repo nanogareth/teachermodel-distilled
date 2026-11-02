@@ -1,0 +1,34 @@
+# The audience policy (decision 0027): which surfaces each role may open, and which fields of each it keeps.
+# A surface or field a role is not given here is dropped. "*" keeps everything. `never` lists words that must not
+# appear in any field name the role receives: a second guard behind the whitelist, so a field added to a read model
+# later cannot leak a score to someone who sees status only (decision 0005). `own_only`: the role may open the
+# surface only about themself. `named_roles`: fields in which another instructor's id may appear in someone's own
+# record (who leads, co-delivers, observes or coaches them).
+schema_version: 1
+named_roles: [lead, co, observer, coach]
+roles:
+  head-of-training:
+    surfaces:
+      this-week: "*"
+      coordinator-board: "*"
+      my-record: "*"
+  coordinator:
+    surfaces:
+      coordinator-board:
+        - deliveries.session
+        - deliveries.programme
+        - deliveries.date
+        - deliveries.lead
+        - deliveries.expected
+        - deliveries.received
+        - deliveries.unreadable
+        - course
+        - auditions.audition
+        - auditions.stage
+        - auditions.forms_in
+        - sources
+    never: [score, baseline, mean, pass, disagree, discuss, outcome]
+  instructor:
+    own_only: true
+    surfaces:
+      my-record: "*"
