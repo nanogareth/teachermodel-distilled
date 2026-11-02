@@ -8,7 +8,11 @@ import sys
 from datetime import date
 from pathlib import Path
 
+import yaml
+
 from . import app, config, daily, devsign, events, pilot, roster, setup, staffing, standards
+from .audition import AuditionError
+from .matching import MatchError
 from .flows.bench import BenchError, request_bench
 from .flows.calibration import ExerciseError, open_exercise
 from .flows.override import OverrideError, request_override
@@ -75,6 +79,33 @@ def _build_parser() -> argparse.ArgumentParser:
     io = _store_parser(sub, "import-outcomes",
                        "import an outcome-import@1 file (aggregates per delivery; any learner field refuses the file)")
     io.add_argument("file", type=Path)
+    au = _store_parser(sub, "audition", "a candidate's audition on the clearance rubric, kept apart from the instructor "
+                                        "record (decision 0025): new, assign, replace, score, status, result, decide, "
+                                        "carry")
+    au.add_argument("action", choices=["new", "assign", "replace", "score", "status", "result", "decide", "carry"])
+    au.add_argument("audition", nargs="?", help="the audition id (every action but new)")
+    au.add_argument("--unit", help="new: sl:unit/<slug>@<n>")
+    au.add_argument("--mode", help="new: in-person, remote or hybrid")
+    au.add_argument("--slice", help="new: the 15-minute slice of the lab the candidate teaches")
+    au.add_argument("--candidate", help="new: the candidate's name (kept only in identities/auditions.yaml)")
+    au.add_argument("--observer", action="append", default=[], help="assign (twice), score: tm:instructor/<id>")
+    au.add_argument("--form", type=Path, help="score: the observer's filled form.yaml")
+    au.add_argument("--decision", choices=["hired", "not-hired"], help="decide")
+    au.add_argument("--reasons", help="decide: the panel's reasons; replace: why the observer is replaced")
+    au.add_argument("--leaving", help="replace: the observer who drops out, before they have scored")
+    au.add_argument("--joining", help="replace: their replacement, from the observer pool")
+    au.add_argument("--by", help="decide: the panel chair, tm:person/<id>")
+    au.add_argument("--instructor", help="carry: the hired candidate's tm:instructor/<id>, once registered")
+    au.add_argument("--on", help="the day, YYYY-MM-DD (default: today)")
+    sm = _store_parser(sub, "staffing-match", "who may teach a unit in a mode on a programme's dates, who is free and "
+                                              "their travel load (decision 0026); writes views/staffing-match.html")
+    sm.add_argument("--unit", required=True)
+    sm.add_argument("--mode", required=True)
+    sm.add_argument("--from", dest="start", required=True, help="first day, YYYY-MM-DD")
+    sm.add_argument("--to", dest="end", required=True, help="last day, YYYY-MM-DD")
+    sm.add_argument("--region", help="where the programme is, ISO code (IE, US-CA)")
+    sm.add_argument("--partner", help="the partner organisation the programme is for, tm:org/<id>")
+    sm.add_argument("--all", action="store_true", help="include blocked instructors")
     ing = _store_parser(sub, "ingest", "apply a driver receipt (sign-offs arrive only inside a receipt)")
     ing.add_argument("receipt", type=Path)
     ex = _store_parser(sub, "open-exercise", "open a calibration exercise (head of training): reference scores go to the store")
@@ -118,7 +149,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ax = _store_parser(sub, "audit-export", "a quarter's audit samples and their agreement as JSON (exports/)")
     ax.add_argument("--quarter", required=True, help="the quarter, YYYYQn (e.g. 2026Q3)")
     _store_parser(sub, "views", "rebuild the index and write the read views (views/: clearance matrix, coaching logs, "
-                  "quality review, instructor records)")
+                  "quality review, monthly outcomes, instructor records)")
     _store_parser(sub, "index", "rebuild the disposable SQLite index (index/teachermodel.sqlite) from the event log")
     gt = _store_parser(sub, "gates", "the spec's phase gates and acceptance criteria, computed from the store (read only)")
     gt.add_argument("--on", default=None, help="the day to judge on, YYYY-MM-DD (default: the newest event's day)")
@@ -246,9 +277,65 @@ def _store_command(args: argparse.Namespace) -> int:
         return staffing.EXIT_CODES[response["verdict"]]
     elif args.cmd == "ingest":
         return _finish(app.do_ingest(private, args.receipt))
+    elif args.cmd == "staffing-match":
+        from . import matching
+
+        request = {"unit": args.unit, "mode": args.mode, "start": date.fromisoformat(args.start),
+                   "end": date.fromisoformat(args.end), "region": args.region, "partner": args.partner}
+        rows, view = matching.staffing_match(private, request, include_blocked=args.all)
+        for r in rows:
+            print(f"{r.verdict:5}  {r.instructor:28}  expires {str(r.expires or '-'):10}  "
+                  f"{'booked ' + ','.join(r.booked) if r.booked else 'free':24}  travel {r.travel_share:.0%}"
+                  + ("  OVER" if r.travel_flag else ""))
+        print(f"staffing-match: {len(rows)} instructor(s); view in {view}")
+    elif args.cmd == "audition":
+        return _audition(private, args)
     else:  # tick
         for rep in app.do_tick(private):
             _print(rep, details=rep.summary.startswith("next:"))
+    return 0
+
+
+def _audition(private: Path, args: argparse.Namespace) -> int:
+    from . import audition as au
+
+    on = date.fromisoformat(args.on) if args.on else date.today()
+    if args.action != "new" and not args.audition:
+        raise au.AuditionError(f"audition {args.action} needs the audition id")
+    if args.action == "new":
+        missing = [f"--{k}" for k in ("unit", "mode", "slice", "candidate") if not getattr(args, k)]
+        if missing:
+            raise au.AuditionError("audition new needs " + ", ".join(missing))
+        made = au.open_audition(private, args.unit, args.mode, args.slice, args.candidate, on)
+        print(f"audition: opened {made}; the pack and a blank form.yaml are in auditions/{made}/")
+    elif args.action == "assign":
+        au.assign(private, args.audition, args.observer, on)
+        print(f"audition: {args.audition} assigned to {', '.join(sorted(args.observer))} on {on}")
+    elif args.action == "replace":
+        if not (args.leaving and args.joining and args.reasons):
+            raise au.AuditionError("audition replace needs --leaving, --joining and --reasons")
+        au.replace(private, args.audition, args.leaving, args.joining, args.reasons, on)
+        print(f"audition: {args.leaving} replaced by {args.joining} on {args.audition}")
+    elif args.action == "score":
+        if len(args.observer) != 1 or not args.form:
+            raise au.AuditionError("audition score needs one --observer and --form")
+        au.score(private, args.audition, args.observer[0], yaml.safe_load(args.form.read_text(encoding="utf-8")))
+        print(f"audition: {args.observer[0]}'s form recorded for {args.audition}")
+    elif args.action == "status":
+        print(json.dumps(au.status(private, args.audition), indent=2))
+    elif args.action == "result":
+        doc = au.result(private, args.audition)
+        print(f"audition: evidence for the panel in auditions/{args.audition}/result.md (overall mean "
+              f"{doc['overall_mean']}; observers within one on {doc['agreement_within_one']:.0%} of domains)")
+    elif args.action == "decide":
+        if not (args.decision and args.reasons and args.by):
+            raise au.AuditionError("audition decide needs --decision, --reasons and --by")
+        au.decide(private, args.audition, args.decision, args.reasons, args.by, on)
+        print(f"audition: {args.audition} decided {args.decision}")
+    else:
+        if not args.instructor:
+            raise au.AuditionError("audition carry needs --instructor")
+        print(f"audition: starting plan written to {au.carry(private, args.audition, args.instructor)}")
     return 0
 
 
@@ -282,7 +369,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return _store_command(args)
     except (config.ConfigError, setup.SetupError, app.AppError, pilot.PilotError, devsign.DevSignError, ExerciseError,
-            QualityError, BenchError, OverrideError) as exc:
+            QualityError, BenchError, OverrideError, AuditionError, MatchError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

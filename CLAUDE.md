@@ -14,7 +14,8 @@ py -m pytest                       # all tests
 py -m pytest tests/test_rules.py -k clearance -v
 teachermodel validate              # schema + cross-checks on standards/
 teachermodel verify-events <path>  # schema, receipts, duplicate ids in an event log
-teachermodel staffing-check --instructor <uri> --unit <uri> --mode <mode> --date <YYYY-MM-DD>  # exit 0 ok/warn, 2 block
+teachermodel staffing-check --instructor <uri> --unit <uri> --mode <mode> --date <YYYY-MM-DD>  # exit 0 ok, 3 warn, 2 block, 1 refused
+teachermodel staffing-match --unit <uri> --mode <mode> --from <day> --to <day> [--region IE]  # who may teach, who is free, travel (0026)
 teachermodel check-roster <path>   # roster file against tm:contract/roster@1
 teachermodel revoke-page --step <id> [--subject <uri>]  # a page to revoke an approval in force (0019)
 teachermodel gates                 # phase gates and acceptance criteria computed from the store (read only)
@@ -22,6 +23,8 @@ teachermodel index                 # rebuild the disposable SQLite index (index/
 teachermodel views                 # index + read views in views/: clearance matrix, coaching logs, quality review, records
 teachermodel history --clearance <uri>  # a clearance's full history from the log alone
 teachermodel audit-export --quarter <YYYYQn>  # a quarter's audit samples as JSON (exports/)
+teachermodel audition new|assign|score|status|result|decide|carry  # a candidate's audition on the rubric, kept apart (0025)
+py scripts/audition_drill.py       # audition acceptance drill on a 4-week simulated store (about 3 minutes)
 teachermodel paper --unit <uri>    # printable run sheet and rubric (paper fallback, 0022)
 teachermodel handoff --unit <uri>  # expert-to-session handoff and what the unit still lacks
 teachermodel init-pilot --owner-name <name> --owner-email <work mailbox>  # pilot store: layout, settings, people, generated inputs, env var (0016)

@@ -40,3 +40,5 @@ bench:
   require_evidence_pack: true
 staffing:
   warn_expiry_days: 30
+  travel_window_days: 90     # operational default (decision 0026): travel load is measured over this window, centred on the programme
+  travel_flag_share: 0.30    # operational default (decision 0026): the top of the role's 25-30% travel range; flagged above it

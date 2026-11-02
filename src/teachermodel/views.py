@@ -9,6 +9,10 @@ Built from the SQLite index (index.py), which is rebuilt first, into `<store>/vi
     quality-review.html            per instructor and unit: outcome summaries against the cohort baseline (below
                                    quality.min_learners_for_metric: "insufficient data"), the monthly rubric average, the
                                    observer count and open triggers
+    monthly-outcomes.html          per month and instructor, newest month first: deliveries measured, learners assessed, the
+                                   learner-weighted score and baseline and the gap; deliveries below
+                                   quality.min_learners_for_metric are counted as "insufficient data" and add no numbers.
+                                   From a lab grader export (outcome-import@1) the score is the pass rate in percent
     instructors/<slug>.html        the instructor's own record: clearances, observations (scores), coaching cycles, dry runs,
                                    CPD, level changes and bench decisions
 
@@ -204,6 +208,47 @@ def quality_review(con: sqlite3.Connection, on: date, rules: dict[str, Any]) -> 
     return _page("Quality review", intro + "".join(sections), on.isoformat())
 
 
+# --- monthly outcomes ---------------------------------------------------------------------------------------------
+
+
+def monthly_outcomes(con: sqlite3.Connection, on: date, rules: dict[str, Any]) -> str:
+    q = rules["quality"]
+    minimum, drop = q["min_learners_for_metric"], q["score_drop_points"]
+    months: dict[tuple[str, str], dict[str, Any]] = {}
+    for o in _rows(con, "SELECT * FROM outcomes WHERE delivered_on IS NOT NULL"):
+        m = months.setdefault((o["delivered_on"][:7], o["instructor"]),
+                              {"n": 0, "learners": 0, "score": 0.0, "baseline": 0.0, "few": 0, "units": set()})
+        m["units"].add(_slug(o["unit"]))
+        learners = o["learners_assessed"] or 0
+        if learners < minimum or o["score"] is None or o["baseline"] is None:
+            m["few"] += 1
+            continue
+        m["n"] += 1
+        m["learners"] += learners
+        m["score"] += o["score"] * learners
+        m["baseline"] += o["baseline"] * learners
+    rows, classes = [], []
+    by_instructor = sorted(months.items(), key=lambda kv: kv[0][1])
+    for (month, uri), m in sorted(by_instructor, key=lambda kv: kv[0][0], reverse=True):  # stable: newest month first
+        if m["learners"]:
+            score, baseline = m["score"] / m["learners"], m["baseline"] / m["learners"]
+            gap = round(score, 1) - round(baseline, 1)
+            numbers = [_e(f"{score:.1f}"), _e(f"{baseline:.1f}"), _e(f"{gap:+.1f}")]
+        else:
+            gap = None
+            numbers = ['<span class="muted">insufficient data</span>', "", ""]
+        rows.append([_e(month), _e(_slug(uri)), _e(", ".join(sorted(m["units"]))), _e(m["n"]), _e(m["learners"]),
+                     *numbers, _e(m["few"])])
+        classes.append("bad" if gap is not None and gap <= -drop else "")
+    intro = (f"<p>Per month and instructor, newest month first. The score and baseline are weighted by learners assessed "
+             f"and read only deliveries with at least {minimum} learners; smaller deliveries are counted, never measured. "
+             f"A month {drop} or more points below baseline is marked. When the outcomes come from a lab grader the score "
+             "is the pass rate in percent. A month is a summary for the quality review, which decides what it means.</p>")
+    table = _table(["Month", "Instructor", "Units", "Deliveries measured", "Learners", "Score", "Baseline",
+                    "Against baseline", "Insufficient data"], rows, classes) if rows else         '<p class="muted">No outcome summaries.</p>'
+    return _page("Monthly outcomes", intro + table, on.isoformat())
+
+
 # --- instructor record --------------------------------------------------------------------------------------------
 
 
@@ -271,7 +316,8 @@ def build(private_dir: Path | str, *, root: Path = ROOT) -> app.Report:
         out = private / VIEWS
         files = {out / "clearance-matrix.html": clearance_matrix(con, on, rules),
                  out / "coaching-log.html": coaching_log(con, on, rules),
-                 out / "quality-review.html": quality_review(con, on, rules)}
+                 out / "quality-review.html": quality_review(con, on, rules),
+                 out / "monthly-outcomes.html": monthly_outcomes(con, on, rules)}
         for (coach,) in con.execute("SELECT DISTINCT coach FROM cycles WHERE coach IS NOT NULL ORDER BY coach"):
             files[out / f"coaching-log--{_slug(coach)}.html"] = coaching_log(con, on, rules, coach)
         for (uri,) in con.execute("SELECT uri FROM instructors ORDER BY uri"):
