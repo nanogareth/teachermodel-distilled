@@ -1,0 +1,25 @@
+# The train-the-trainer course (docs/train-the-trainer/DESIGN.md): its sessions and the evidence each one records.
+# Read by `teachermodel course` and by the W1 train-the-trainer sign-off page. Ids are stable; titles may change.
+schema_version: 1
+id: tm:course/train-the-trainer
+sessions:
+  - id: micro-teach
+    title: Micro-teach rounds
+    domains: [technical-depth, prior-knowledge, conceptual-questioning, lab-facilitation]  # remote-inclusive: session 4
+    evidence: Both rounds' rubric forms
+  - id: prior-knowledge
+    title: Diagnosing prior knowledge
+    domains: [prior-knowledge, conceptual-questioning]
+    evidence: The diagnostic question set, in the unit's pre_check shape
+  - id: lab-facilitation
+    title: Lab facilitation and recovery
+    domains: [lab-facilitation]
+    evidence: The injected failure and how it was handled
+  - id: remote-delivery
+    title: Remote and inclusive delivery
+    domains: [remote-inclusive]
+    evidence: The remote round's rubric form
+  - id: rubric-scoring
+    title: Seeing teaching through the rubric
+    domains: [technical-depth, prior-knowledge, conceptual-questioning, lab-facilitation, remote-inclusive]
+    evidence: Scores of two reference recordings against the reference

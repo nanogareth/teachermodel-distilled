@@ -27,7 +27,7 @@ from typing import Any
 import yaml
 
 from . import util
-from . import app, config, devsign, pilot, records, roster as roster_module, staffing
+from . import app, config, course, devsign, pilot, records, roster as roster_module, staffing
 from .flows.bench import request_bench
 from .flows.common import clearer_instructors
 from .flows.calibration import STEP_SCORE, open_exercise
@@ -54,6 +54,7 @@ BENCH_DECISION = "tm:step/bench-decision"
 OVERRIDE_DECISION = "tm:step/override-decision"
 LOG_ACTIVITY = "tm:step/log-activity"
 ASSIGN_OBSERVER = "tm:step/assign-observer"
+TRAIN_THE_TRAINER = "tm:step/train-the-trainer"
 REPLY = "tm:step/reply-or-appeal"
 OPTIONAL = frozenset({LOG_ACTIVITY, ASSIGN_OBSERVER, REPLY})  # signed only when an initiative asks for it
 ASSIGNMENTS_APPROVED = "tm:step/assignments-approved"
@@ -483,6 +484,7 @@ class _Run:
         out += self._calibration(st, at)
         out += self._outcomes(st, at)
         self._cpd(st, today)
+        self._course(st, today)
         self._adhoc(st, today)
         out += self._bench(st, at)
         out += self._override(st, at)
@@ -565,6 +567,13 @@ class _Run:
             if d.step == LOG_ACTIVITY and (d.subject, month) not in self.cpd_months:
                 self.cpd_months.add((d.subject, month))
                 self.wanted.add((d.step, d.subject))
+
+    def _course(self, st: app.State, today: date) -> None:
+        """A participant whose train-the-trainer step is open has taken the course by then: every session is recorded,
+        so the completion page exists (it is not built while a session is missing)."""
+        for d in app.due_steps(st, today):
+            if d.step == TRAIN_THE_TRAINER:
+                course.record_generated(self.store, d.subject, today, st.registrations, self.root)
 
     def _adhoc(self, st: app.State, today: date) -> None:
         """Once a quarter, from its second month, one ad-hoc observer for the open candidate with the fewest observations."""

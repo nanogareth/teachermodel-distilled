@@ -70,7 +70,7 @@ except ImportError:  # run straight from a checkout without `pip install -e .`
 
 import yaml  # noqa: E402
 
-from teachermodel import app, config, devsign, events, records, rules, setup, staffing, workflow  # noqa: E402
+from teachermodel import app, config, course, devsign, events, records, rules, setup, staffing, workflow  # noqa: E402
 from teachermodel.flows import audit, bench, calibration, clearance, cpd, dry_run, override, quality  # noqa: E402
 from teachermodel.standards import check_standards, domain_ids, load_standards  # noqa: E402
 
@@ -692,6 +692,9 @@ def stage_w1(h: Harness) -> None:
 
     for step in ("tm:step/train-the-trainer", "tm:step/shadow-delivery", "tm:step/co-delivery"):
         h.expect_due(step, SME)
+        if step == "tm:step/train-the-trainer":  # no completion page until every session is recorded
+            expect(not app.PAGE_SPECS[step](h.state(), SME), "a completion page with sessions missing")
+            course.record_generated(h.private, SME, h.t.date(), h.state().registrations, h.root)
         h.round([Want(step, SME, person="tm:person/coord-1")])
         h.expect_not_due(step, SME)
     h.done("coordinator steps signed", "train-the-trainer, shadow delivery and co-delivery recorded")

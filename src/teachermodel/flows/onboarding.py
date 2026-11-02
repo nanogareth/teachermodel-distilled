@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from .. import events, signoff
+from .. import course, events, signoff
 from .. import pages as pagegen
 from ..util import iso_seconds
 from . import on_signoff, register
@@ -85,5 +85,26 @@ def _level_change(st: State, signed: dict[str, Any], document: dict[str, Any], n
 
 for _step in ("tm:step/commitment-manager", "tm:step/commitment-partner-lead"):
     register(_step)(_commitment(_step))
-for _step in ("tm:step/train-the-trainer", "tm:step/shadow-delivery", "tm:step/co-delivery"):
+for _step in ("tm:step/shadow-delivery", "tm:step/co-delivery"):
     register(_step)(_delivery(_step))
+
+
+@register("tm:step/train-the-trainer")
+def _b_train_the_trainer(st: State, subject: str):
+    """The completion page, only once the participant's course record (`course.status`) has every session: while one
+    is missing there is no page to approve, and the coordinator board shows the record instead. The record is among the
+    inputs, so the sign-off binds to the record it was signed on (docs/train-the-trainer/DESIGN.md). The date is the
+    last session's; there is no delivery reference, since the course is not a delivery."""
+    record = course.status(st.private, subject, st.root)
+    if any(r["recorded"] == "missing" for r in record):
+        return []
+    last = max(r["recorded"] for r in record)
+    fields = [
+        {"name": "date", "label": "Course completed", "kind": "date", "required": True, "value": last,
+         "help": "The last session's date, from the course record."},
+        {"name": "note", "label": "Note", "kind": "textarea", "required": False},
+    ]
+    reg = st.registrations.get(subject) or {}
+    inputs = {"instructor": subject, "type": reg.get("type"), "level": current_level(st, subject), "course": record}
+    return per_signer(st, "tm:step/train-the-trainer", subject, "approve", inputs, fields,
+                      intro="Every session of the course is recorded below. Approve to record the course as complete.")

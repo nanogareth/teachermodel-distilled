@@ -28,13 +28,14 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from . import app, pilot, setup
+from . import app, course, pilot, setup
 from .signoff import input_sha256
 from .flows.calibration import STEP_SCORE, open_exercise
 from .flows.quality import import_outcomes
 from .standards import ROOT
 
 STEP_ROSTER_IMPORT = "tm:step/roster-import"
+STEP_TRAIN_THE_TRAINER = "tm:step/train-the-trainer"
 # Optional records that open again after every sign-off (observation.yaml: an ad-hoc assignment; cpd.yaml: an activity
 # log entry). Signing them only feeds them, and each ad-hoc observation reopens the candidate's clearance round.
 SKIP_STEPS = frozenset({"tm:step/assign-observer", "tm:step/log-activity", "tm:step/reply-or-appeal"})
@@ -183,6 +184,11 @@ def autosign(private_dir: Path | str, *, rounds: int = 20, generated_only: bool 
                 rep.lines.append(f"import-outcomes: {res.appended} outcome event(s) appended")
             acted = True
         st = app.load_state(private, root)
+        for d in app.due_steps(st, today):  # the completion page exists only once the course is recorded
+            if d.step == STEP_TRAIN_THE_TRAINER and course.missing(private, d.subject, root):
+                n_rec = course.record_generated(private, d.subject, today, st.registrations, root)
+                rep.lines.append(f"course: {n_rec} session(s) recorded for {d.subject}")
+                acted = True
         clearers = _clearers(st)
         if len(clearers) >= 2 and not any(info.get("kind") == "exercise" for info in st.subjects.values()) \
                 and (private / "inputs" / "calibration-reference.yaml").is_file():

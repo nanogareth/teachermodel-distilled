@@ -12,6 +12,7 @@ import yaml
 
 from . import app, config, daily, devsign, events, pilot, roster, setup, staffing, standards
 from .audition import AuditionError
+from .course import CourseError
 from .matching import MatchError
 from .flows.bench import BenchError, request_bench
 from .flows.calibration import ExerciseError, open_exercise
@@ -42,6 +43,17 @@ def _build_parser() -> argparse.ArgumentParser:
     v.add_argument("path", type=Path)
     r = sub.add_parser("check-roster", help="check a roster file against tm:contract/roster@2")
     r.add_argument("path", type=Path)
+    q = sub.add_parser("check-questions", help="check a train-the-trainer session 2 question set against its unit")
+    q.add_argument("path", type=Path)
+    fl = sub.add_parser("check-failure-log", help="check a train-the-trainer session 3 failure log against the lab")
+    fl.add_argument("path", type=Path)
+    fl.add_argument("--catalogue", type=Path, required=True,
+                    help="the lab's staff/catalogue.yaml (or a unit file): its failure_catalogue")
+    cs = sub.add_parser("compare-scores", help="train-the-trainer session 5: scores of reference recordings against the "
+                                               "reference, domain by domain (formative, not a calibration)")
+    cs.add_argument("path", type=Path)
+    cs.add_argument("--reference", type=Path, required=True, help="the reference scores, kept in the private store")
+    cs.add_argument("--out", type=Path, help="write the comparison here (the session's evidence)")
     for name, help_ in STORE_COMMANDS.items():
         p = _store_parser(sub, name, help_)
         if name == "next":
@@ -106,6 +118,13 @@ def _build_parser() -> argparse.ArgumentParser:
     sm.add_argument("--region", help="where the programme is, ISO code (IE, US-CA)")
     sm.add_argument("--partner", help="the partner organisation the programme is for, tm:org/<id>")
     sm.add_argument("--all", action="store_true", help="include blocked instructors")
+    co = _store_parser(sub, "course", "the train-the-trainer course record: record a completed session, or show a "
+                                      "participant's sessions (docs/train-the-trainer/DESIGN.md)")
+    co.add_argument("action", choices=["record", "status"])
+    co.add_argument("--instructor", required=True, help="tm:instructor/<id>")
+    co.add_argument("--session", help="record: a session id from standards/train-the-trainer.yaml")
+    co.add_argument("--evidence-ref", help="record: the private-store key of the session's evidence")
+    co.add_argument("--on", help="record: the day, YYYY-MM-DD (default: today)")
     ing = _store_parser(sub, "ingest", "apply a driver receipt (sign-offs arrive only inside a receipt)")
     ing.add_argument("receipt", type=Path)
     ex = _store_parser(sub, "open-exercise", "open a calibration exercise (head of training): reference scores go to the store")
@@ -288,6 +307,22 @@ def _store_command(args: argparse.Namespace) -> int:
                   f"{'booked ' + ','.join(r.booked) if r.booked else 'free':24}  travel {r.travel_share:.0%}"
                   + ("  OVER" if r.travel_flag else ""))
         print(f"staffing-match: {len(rows)} instructor(s); view in {view}")
+    elif args.cmd == "course":
+        from . import course
+
+        if args.action == "record":
+            if not (args.session and args.evidence_ref):
+                raise course.CourseError("course record needs --session and --evidence-ref")
+            on = date.fromisoformat(args.on) if args.on else date.today()
+            course.record(private, args.instructor, args.session, args.evidence_ref, on,
+                          app.load_state(private).registrations)
+            print(f"course: {args.session} recorded for {args.instructor} on {on}")
+        else:
+            rows = course.status(private, args.instructor)
+            for r in rows:
+                print(f"{r['recorded']:10}  {r['session']:18}  {r['title']}")
+            done = sum(r["recorded"] != "missing" for r in rows)
+            print(f"course: {done} of {len(rows)} sessions recorded for {args.instructor}")
     elif args.cmd == "audition":
         return _audition(private, args)
     else:  # tick
@@ -342,17 +377,47 @@ def _audition(private: Path, args: argparse.Namespace) -> int:
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
-    if args.cmd in ("validate", "verify-events", "check-roster"):
+    if args.cmd in ("validate", "verify-events", "check-roster", "check-questions", "check-failure-log"):
         if args.cmd == "validate":
             errors = standards.check_standards()
         elif args.cmd == "verify-events":
             errors = events.verify(args.path)
+        elif args.cmd == "check-questions":
+            from . import course
+
+            errors = course.question_set_errors(yaml.safe_load(args.path.read_text(encoding="utf-8")))
+        elif args.cmd == "check-failure-log":
+            from . import course
+
+            errors = course.failure_log_errors(yaml.safe_load(args.path.read_text(encoding="utf-8")),
+                                               yaml.safe_load(args.catalogue.read_text(encoding="utf-8")))
         else:
             errors = roster.check_roster(roster.load(args.path))
         for e in errors:
             print(e, file=sys.stderr)
         print("ok" if not errors else f"{len(errors)} problem(s)")
         return 1 if errors else 0
+
+    if args.cmd == "compare-scores":
+        from . import course
+
+        rows, errors = course.compare_scores(yaml.safe_load(args.path.read_text(encoding="utf-8")),
+                                             yaml.safe_load(args.reference.read_text(encoding="utf-8")))
+        for e in errors:
+            print(e, file=sys.stderr)
+        if errors:
+            print(f"{len(errors)} problem(s)")
+            return 1
+        for r in rows:
+            print(f"{r['recording']}: exact {r['exact']:.0%}, within one point {r['within_one']:.0%}")
+            for d in r["domains"]:
+                print(f"  {d['domain']:24} {d['score']}  reference {d['reference']}  {d['difference']:+d}")
+        bar = standards.load_standards()["rules"]["calibration"]
+        print(f"for comparison only: calibration (W5) asks for {bar['within_one_point_share']:.0%} within one point and "
+              f"{bar['exact_agreement_share']:.0%} exact; this is not a calibration")
+        if args.out:
+            args.out.write_text(yaml.safe_dump({"recordings": rows}, sort_keys=False), encoding="utf-8", newline="\n")
+        return 0
 
     if args.cmd == "dev-simulate":
         from . import simulate
@@ -369,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return _store_command(args)
     except (config.ConfigError, setup.SetupError, app.AppError, pilot.PilotError, devsign.DevSignError, ExerciseError,
-            QualityError, BenchError, OverrideError, AuditionError, MatchError) as exc:
+            QualityError, BenchError, OverrideError, AuditionError, MatchError, CourseError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

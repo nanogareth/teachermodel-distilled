@@ -25,6 +25,10 @@ teachermodel history --clearance <uri>  # a clearance's full history from the lo
 teachermodel audit-export --quarter <YYYYQn>  # a quarter's audit samples as JSON (exports/)
 teachermodel audition new|assign|score|status|result|decide|carry  # a candidate's audition on the rubric, kept apart (0025)
 py scripts/audition_drill.py       # audition acceptance drill on a 4-week simulated store (about 3 minutes)
+teachermodel course record|status --instructor <uri> [--session <id> --evidence-ref <key>]  # train-the-trainer record
+teachermodel check-questions <file>  # a session 2 question set: pre_check shape, each wrong option names a misconception
+teachermodel check-failure-log <file> --catalogue <lab staff/catalogue.yaml>  # a session 3 failure log against the lab
+teachermodel compare-scores <file> --reference <file> [--out <file>]  # session 5: scores against the reference (not a calibration)
 teachermodel paper --unit <uri>    # printable run sheet and rubric (paper fallback, 0022)
 teachermodel handoff --unit <uri>  # expert-to-session handoff and what the unit still lacks
 teachermodel init-pilot --owner-name <name> --owner-email <work mailbox>  # pilot store: layout, settings, people, generated inputs, env var (0016)
