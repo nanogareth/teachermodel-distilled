@@ -1,0 +1,9 @@
+schema: portfolio/project@1
+id: teachermodel-distilled
+name: "teachermodel-distilled"
+aliases: ["nanogareth/teachermodel-distilled", "teachermodel-public"]
+partition: personal
+kinds: [code, research]
+status: active
+summary: "Public rebuild, on generated data, of an instructor clearance, coaching and quality system for a technical training function"
+bets: []
