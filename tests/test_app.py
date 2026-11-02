@@ -122,7 +122,7 @@ def test_import_roster_copies_and_registers(fictional_store, privacy_root, examp
 def test_pages_one_per_signer(fictional_store, example_roster):
     import_roster_ungated(fictional_store, example_roster, T0)
     st = app.load_state(fictional_store)
-    specs = app.PAGE_SPECS["tm:step/train-the-trainer"](st, PARTNER)
+    specs = app.PAGE_SPECS["tm:step/shadow-delivery"](st, PARTNER)
     assert sorted(s["signer"] for s in specs) == ["tm:person/coord-1", "tm:person/coord-2"]
     assert len({app.page_stem(s["step"], s["subject_uri"], s["signer"]) for s in specs}) == 2
     assert {f["name"] for f in specs[0]["fields"]} == {"date", "delivery_ref", "note"}

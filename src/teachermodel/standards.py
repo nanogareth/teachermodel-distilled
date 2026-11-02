@@ -139,6 +139,10 @@ def check_standards(root: Path = ROOT) -> list[str]:
             category_ids=[c["id"] for c in setup.data_categories(root)],
             retention=retention,
         )
+    if (root / "standards" / "chains.yaml").is_file():  # decision 0029
+        from . import interventions
+
+        errors += [f"chains: {e}" for e in interventions.problems(interventions.chains_doc(root), root)]
     return errors
 
 

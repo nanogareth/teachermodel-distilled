@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/drafts/propose-slots@1",
+  "title": "Draft content: propose-slots",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slots",
+    "message"
+  ],
+  "properties": {
+    "slots": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}"
+          },
+          "end": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}"
+          }
+        }
+      }
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 600
+    }
+  },
+  "description": "Calendar slots to propose; the person accepts or declines"
+}

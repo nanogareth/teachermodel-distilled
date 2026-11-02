@@ -112,7 +112,7 @@ details.ref > summary { font-weight: 600; }
  "signer": "tm:person/example-clearer",
  "role": "clearer",
  "input_sha256": "e488cc4d685984fbdeee5f1bf4b5dc037df787a82e378a061b0ae8423bccd8aa",
- "page_template_sha256": "457bf8bf152ed740d53f29decbba0535ca9a01c45590d761e740081ad7b44bb2",
+ "page_template_sha256": "fa450cb7db433173a74f2e04d5afb4f3679b211acf661fd769204116adaa882e",
  "channel": {
   "kind": "mail",
   "to": "programme@example.test"
@@ -202,6 +202,11 @@ details.ref > summary { font-weight: 600; }
       return;
     }
     if (score === null) { errors.push(f.label + ': choose a score 1 to 4'); return; }
+    if (score === 'no') {
+      if (note === '') { errors.push(f.label + ': not observable: say why it could not be observed'); return; }
+      fields[f.name] = { not_observable: true, note: note };
+      return;
+    }
     if (note === '') { errors.push(f.label + ': evidence note required'); return; }
     v = { score: parseInt(score, 10), note: note };
     if (ts !== '') { v.timestamp = ts; }

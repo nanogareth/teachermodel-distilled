@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/drafts/replacement-observer@1",
+  "title": "Draft content: replacement-observer",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "observer",
+    "reason",
+    "command"
+  ],
+  "properties": {
+    "observer": {
+      "type": "string",
+      "pattern": "^tm:(person|instructor)/[a-z0-9][a-z0-9-]*$"
+    },
+    "reason": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300
+    },
+    "command": {
+      "type": "string",
+      "pattern": "^teachermodel audition replace "
+    }
+  },
+  "description": "One replacement observer, ready for `teachermodel audition replace`"
+}

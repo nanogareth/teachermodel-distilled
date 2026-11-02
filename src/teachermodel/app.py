@@ -420,7 +420,16 @@ def _pages(st: State, now: datetime) -> Report:
                 st.private / "pages", page_stem(spec["step"], spec["subject_uri"], spec["signer"]), page_html, spec["inputs"])
             written += changed
             unchanged += not changed
-    rep.summary = f"pages: {written} written, {unchanged} unchanged, {problems} problem(s)"
+    from . import audition, units  # here, not at the top: audition imports app
+
+    try:
+        drawn, removed = audition.write_pages(st.private, st=st, root=st.root)
+    except (audition.AuditionError, units.UnitError, KeyError, OSError) as exc:
+        rep.lines.append(f"problem: audition pages: {exc}")
+        problems += 1
+        drawn = removed = 0
+    rep.summary = (f"pages: {written} written, {unchanged} unchanged, {problems} problem(s); "
+                   f"{drawn} audition page(s) written, {removed} removed")
     return rep
 
 
@@ -837,6 +846,16 @@ def do_ingest(
         revocable=revocable_in_force(st),
     )
     hook_events, hook_documents = _signoff_hooks(st, applied, now)
+    from . import audition  # here, not at the top: audition imports app
+
+    audition_lines: list[str] = []
+    if applied.auditions:
+        stored, refused = audition.receive(private, applied.auditions, now, root)
+        audition_lines = [*stored, *(f"rejected: {r}" for r in refused)]
+    if applied.requests:
+        from . import requests  # here, not at the top: requests imports app
+
+        audition_lines += requests.receive(private, applied.requests, now, root)
     new = [*applied.events, *hook_events]
     # A pilot receipt (pilot-sign, decision 0016) did not read the real sign-off mailbox, so it must not move the
     # start of the connector's next search past real sign-offs it has not seen.
@@ -851,9 +870,10 @@ def do_ingest(
     added = append_new(private, new, set(st.index.ids))  # after the documents: a failed write leaves the log untouched
     kinds = Counter(e["kind"] for e in added)
     detail = ", ".join(f"{n} {k}" for k, n in sorted(kinds.items())) or "none"
-    rep = Report(lines=[f"rejected: {r}" for r in applied.rejected])
+    rep = Report(lines=[f"rejected: {r}" for r in applied.rejected] + audition_lines)
     rep.summary = (f"ingest: {len(added)} event(s) appended ({detail}), {len(applied.rejected)} rejected, "
-                   f"{documents} sign-off document(s) stored")
+                   f"{documents} sign-off document(s) stored"
+                   + (f", {len(applied.auditions)} audition form(s) read" if applied.auditions else ""))
     rep.ok = bool(added) or not applied.rejected  # a receipt refused whole produces no events
     return rep
 

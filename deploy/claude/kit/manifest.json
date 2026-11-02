@@ -1,0 +1,48 @@
+{
+  "generated_from": "standards/chains.yaml",
+  "chains_sha256": "e1b7e77eac922574ae6aa76eac9702cd2135f4643aecfd675ba05a059d70cb51",
+  "model": "claude-opus-5-5",
+  "anthropic_version": "2026-10-21",
+  "betas": {
+    "draft": [
+      "mcp-client-2026-09-15",
+      "server-side-fallback-2026-07-01"
+    ],
+    "draft-no-connectors": [
+      "server-side-fallback-2026-07-01"
+    ]
+  },
+  "to_fill": [
+    {
+      "connector": "salesforce",
+      "placeholder": "https://set-by-it.invalid/salesforce"
+    },
+    {
+      "connector": "workday",
+      "placeholder": "https://set-by-it.invalid/workday"
+    }
+  ],
+  "files": {
+    "agents/crm-task.md": "f27db00fe30123226677b4ba16672dafd8ce034390644ae6eb1d36e2a80ac1d4",
+    "agents/enrol-make-up.md": "0136a2bbf7cd8678642b58387cf577b8a4f65bc7f5aafbd58af3815a92dbcc33",
+    "agents/grader-ticket.md": "5ad82fad957a637b5a63ae8ed356ee89151a7be625094f7dabfb564ee238e582",
+    "agents/triage-lab.md": "3aff0a871363d66bfdb0883bb3effc1cfd1e245ea0a02788b1f95778b52984a5",
+    "drafting/draft-coaching-plan.json": "7413f5640a57396d615e9bd67e87f0b99fa189759bb5c7b8f81499c177746dd6",
+    "drafting/find-cover.json": "9b5f095514a8b2779b222073d47dc1734fa50efc637ce2c2415c35fa1f81543b",
+    "drafting/propose-slots.json": "5b66dbe866013380ccd8e45a45ce972519a7fab3435b20892cae04a91a07bd4c",
+    "drafting/remind-owner.json": "587ae2b963aa8118c344286d46a66940ec63580a15036c4de1d0e798dd654d35",
+    "drafting/replacement-observer.json": "34d360b1e8887afa54ef655e3cd80875cebb0aae11818f2ff688b06a8e274680",
+    "drafting/suggest-cpd.json": "6ab5276ac53b5eb9809a0a2803afa2952e874a541215f7e8a869b8c1eade2112",
+    "environments/buttons.yaml": "f56825b9abcc519221191fcd9fbd83f74147afbc0dedec1ee37a466d53d17f9a",
+    "prompts/crm-task.md": "88969dcf7a941441e1556cacd8a28eb27462bd56eceed56a2331b3655ef97f76",
+    "prompts/draft-coaching-plan.md": "37900f962f24ed249523e6176591ed545180519b52c1f8313f2cd62d99ba89f1",
+    "prompts/enrol-make-up.md": "eddac2baa44b73bb5f8a30a8bbe88c56bb6850e5be52653703ae4b6a2356fb5d",
+    "prompts/find-cover.md": "b89f2d5949d1d65324e7a794a47d6c9a728babb0268f9f207dc5c44e9b34c6d7",
+    "prompts/grader-ticket.md": "0983809b91a48ea46c687ca7cc42d0b39301d9ed84db5053eab064d110dec7e2",
+    "prompts/propose-slots.md": "3328355eb4b03748f8ab029d8a8fadb1b4e1c7e1ac4e191163f7987f4630355a",
+    "prompts/remind-owner.md": "4e05d7db719c2168b8e2131ba002d27bad1b9028e63fb88422b88652d169bf1e",
+    "prompts/replacement-observer.md": "d506298d5c238512a7ccf19664140f1fc85884dcb9a0f3e0497e1379cd893009",
+    "prompts/suggest-cpd.md": "0cb06fe89adc1be6fed808aecf404eb57995fd778dab452378ba8be354520442",
+    "prompts/triage-lab.md": "dbc3d88d80ee09aa111a7f00c930e8ff6127ad7f036c82878bc1cc93ababa771"
+  }
+}

@@ -14,14 +14,27 @@ py -m pytest                       # all tests
 py -m pytest tests/test_rules.py -k clearance -v
 teachermodel validate              # schema + cross-checks on standards/
 teachermodel verify-events <path>  # schema, receipts, duplicate ids in an event log
-teachermodel staffing-check --instructor <uri> --unit <uri> --mode <mode> --date <YYYY-MM-DD>  # exit 0 ok/warn, 2 block
+teachermodel staffing-check --instructor <uri> --unit <uri> --mode <mode> --date <YYYY-MM-DD>  # exit 0 ok, 3 warn, 2 block, 1 refused
+teachermodel staffing-match --unit <uri> --mode <mode> --from <day> --to <day> [--region IE]  # who may teach, who is free, travel (0026)
+teachermodel import-schedule <file>  # a calendar export of sessions (schedule@1) kept as inputs/schedule.yaml (0027)
+teachermodel import-feed <file>    # a lab feed (release-status@1, results-received@1, room-summary@1) kept under inputs/; daily drains inbox/ (0028, 0033)
 teachermodel check-roster <path>   # roster file against tm:contract/roster@1
 teachermodel revoke-page --step <id> [--subject <uri>]  # a page to revoke an approval in force (0019)
 teachermodel gates                 # phase gates and acceptance criteria computed from the store (read only)
 teachermodel index                 # rebuild the disposable SQLite index (index/teachermodel.sqlite)
 teachermodel views                 # index + read views in views/: clearance matrix, coaching logs, quality review, records
+teachermodel check-draft <file>    # a Claude button's draft, a session record or a card's command against its contract (0029)
+teachermodel claude-kit --out deploy/claude/kit [--connector name=url]  # the Claude buttons' deployment files from standards/chains.yaml (0029)
+teachermodel request new|propose|confirm|decline|withdraw|status  # a programme someone asks us to staff; views/requests/<id>.html is their page (0034)
 teachermodel history --clearance <uri>  # a clearance's full history from the log alone
 teachermodel audit-export --quarter <YYYYQn>  # a quarter's audit samples as JSON (exports/)
+teachermodel audition new|assign|score|status|result|decide|carry  # a candidate's audition on the rubric, kept apart (0025); assign draws each observer's signed page, forms return by mail with no event (0031)
+py scripts/audition_drill.py       # audition acceptance drill on a 4-week simulated store (about 3 minutes)
+teachermodel course intake <file> --instructor <uri> --session <id> --on <day> [--catalogue <f>] [--reference <key>]  # check, store, record (0030)
+teachermodel course record|status --instructor <uri> [--session <id> --evidence-ref <key> --on <day>]  # by hand: the key must exist
+teachermodel check-questions <file>  # a session 2 question set: pre_check shape, each wrong option names a misconception
+teachermodel check-failure-log <file> --catalogue <lab staff/catalogue.yaml>  # a session 3 failure log against the lab
+teachermodel compare-scores <file> --reference <file> [--out <file>]  # session 5: scores against the reference (not a calibration)
 teachermodel paper --unit <uri>    # printable run sheet and rubric (paper fallback, 0022)
 teachermodel handoff --unit <uri>  # expert-to-session handoff and what the unit still lacks
 teachermodel init-pilot --owner-name <name> --owner-email <work mailbox>  # pilot store: layout, settings, people, generated inputs, env var (0016)

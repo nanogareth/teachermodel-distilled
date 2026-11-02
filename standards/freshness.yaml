@@ -1,0 +1,35 @@
+# The freshness register (decision 0027): every source the role surfaces read, who owns it, how often it must report,
+# and how its last report is read. A source past `every_days` plus `grace_days` is stale and becomes an item on its
+# owner's page; silence is never shown as success. Cadences and grace are operational defaults (decision 0002).
+schema_version: 1
+sources:
+  - id: daily-job
+    title: The daily job
+    owner: head-of-training
+    every_days: 1
+    grace_days: 1
+    read: daily-log            # the last line of logs/daily.log
+  - id: lab-outcomes
+    title: Lab outcomes
+    owner: coordinator
+    every_days: 31
+    grace_days: 7
+    read: newest-outcome       # the newest outcome event
+  - id: schedule
+    title: Session schedule
+    owner: coordinator
+    every_days: 7
+    grace_days: 2
+    read: schedule-export      # exported_at in inputs/schedule.yaml
+  - id: bookings
+    title: Bookings
+    owner: coordinator
+    every_days: 7
+    grace_days: 0
+    read: bookings-export      # exported_at in a bookings@2 file; a bookings@1 file's modification time
+  - id: release-check
+    title: Weekly release check
+    owner: lab-maintainer
+    every_days: 7
+    grace_days: 1
+    read: release-status       # run_at in inputs/release-status.json (decision 0028)

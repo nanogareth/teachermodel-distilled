@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/room-summary@1",
+  "title": "A live room's session as counts (private store inputs/rooms/<room_id>.json)",
+  "description": "What the checkpoint collector kept of one session (proving-ground tools/checkpoints/collector.py, decision 0033): per step, how far the room got and how long a step held it, and the demonstrations marked. Never a device code, a person, an instructor or a session reference: what stalls is a fact about the lab, not about who taught it. Kept as an input, never an event.",
+  "type": "object",
+  "required": ["schema", "source", "room_id", "lab", "started_at", "ended_at", "minutes", "devices", "steps", "marks", "refused"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/room-summary@1"},
+    "source": {"type": "string", "minLength": 1},
+    "room_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$", "description": "The lab, the minute it started and the room code: the file's key"},
+    "lab": {"type": "string", "pattern": "^[a-z0-9][a-z0-9.-]*$"},
+    "started_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "ended_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "minutes": {"type": "integer", "minimum": 0},
+    "devices": {"type": "integer", "minimum": 1},
+    "steps": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/step"}},
+    "marks": {"type": "array", "items": {"$ref": "#/$defs/mark"}},
+    "refused": {"type": "integer", "minimum": 0, "description": "Reports the room refused, for any reason"}
+  },
+  "$defs": {
+    "step": {
+      "type": "object",
+      "required": ["step", "title", "reached", "stuck_at_end", "stuck_peak", "long_stuck_peak", "held_minutes"],
+      "additionalProperties": false,
+      "properties": {
+        "step": {"type": "integer", "minimum": 1},
+        "title": {"type": "string", "minLength": 1},
+        "reached": {"type": "integer", "minimum": 0},
+        "stuck_at_end": {"type": "integer", "minimum": 0},
+        "stuck_peak": {"type": "integer", "minimum": 0},
+        "long_stuck_peak": {"type": "integer", "minimum": 0},
+        "held_minutes": {"type": "integer", "minimum": 0, "description": "Minutes a third or more of the room had been stuck on this step for over five minutes"}
+      }
+    },
+    "mark": {
+      "type": "object",
+      "required": ["minute", "step"],
+      "additionalProperties": false,
+      "properties": {"minute": {"type": "integer", "minimum": 0}, "step": {"type": "integer", "minimum": 1}}
+    }
+  }
+}

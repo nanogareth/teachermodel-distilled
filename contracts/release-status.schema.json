@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/release-status@1",
+  "title": "Release status feed (private store inputs/release-status.json)",
+  "description": "What the weekly release check writes (proving-ground tools/release_check.py --status, decision 0028): per registered lab, whether its checks passed against the newest releases, as counts; the shared checks (SDK, model ids, CLIs, lab registry) summarised once. No output text, path or person, so nothing a check printed leaves the run. Kept as an input, never an event; the freshness register reads run_at.",
+  "type": "object",
+  "required": ["schema", "source", "run_at", "labs", "shared"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/release-status@1"},
+    "source": {"type": "string", "minLength": 1},
+    "run_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "labs": {"type": "array", "items": {"$ref": "#/$defs/lab"}},
+    "shared": {"$ref": "#/$defs/counts"}
+  },
+  "$defs": {
+    "status": {"enum": ["passed", "failed", "not-run"]},
+    "counts": {
+      "type": "object",
+      "required": ["status", "checks", "failed"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"$ref": "#/$defs/status"},
+        "checks": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0}
+      }
+    },
+    "lab": {
+      "type": "object",
+      "required": ["lab", "unit", "status", "checks", "failed"],
+      "additionalProperties": false,
+      "properties": {
+        "lab": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$", "description": "The scenario slug, as the schedule's lab field names it"},
+        "unit": {"type": ["string", "null"], "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$", "description": "The unit the lab serves; null until the registry links it"},
+        "status": {"$ref": "#/$defs/status"},
+        "checks": {"type": "integer", "minimum": 0},
+        "failed": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

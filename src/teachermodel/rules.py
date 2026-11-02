@@ -177,6 +177,16 @@ def inter_observer_agreement(scores: dict[str, dict[str, int]]) -> dict[str, dic
     return out
 
 
+def calibration_bias(scored: Iterable[tuple[dict[str, int], dict[str, int]]]) -> dict[str, float]:
+    """Per item, the observer's own score minus the reference, averaged over the (scores, reference) pairs that have the
+    item. Above 0 scores high, below 0 low. Reported only (decision 0032): calibration_pass alone decides pass or fail."""
+    differences: dict[str, list[int]] = {}
+    for scores, reference in scored:
+        for item in sorted(set(scores) & set(reference)):
+            differences.setdefault(item, []).append(scores[item] - reference[item])
+    return {item: sum(d) / len(d) for item, d in sorted(differences.items())}
+
+
 def effective_observers(observers: set[str], coaches: set[str], rules: Rules) -> int:
     """Distinct observers, with the instructor's coaches counting as at most max_coach_observers."""
     cap = rules["clearance"]["max_coach_observers"]

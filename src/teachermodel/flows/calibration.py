@@ -37,7 +37,7 @@ from . import auto_step, content_check, on_signoff, register
 from .common import (
     HEAD_ROLE, is_head,
     PageProblem, State, bench_block, calibrations, clearer_instructors, current_level, evidence_score_reasons, is_calibrated_on,
-    lapses, people_with, signed_scores, spec,
+    lapses, people_with, signed_scores, spec, _SIGNOFF_ID,
 )
 from .pathway import subject_event_id
 
@@ -54,6 +54,7 @@ _KEY = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.\-/]*\Z")  # a key into the private
 
 
 MIN_OBSERVERS = 2  # spec v0.2 W5 step 1: two or more observers score the same recording
+DETAIL_EXERCISES = 6  # how many recent results an observer's detail covers (operational default, decision 0002)
 
 
 class ExerciseError(Exception):
@@ -221,16 +222,20 @@ def _score_content(st: State, document: dict[str, Any]) -> list[str]:
 # --- the result step ---------------------------------------------------------------------------------------
 
 
-def _reference(st: State, info: dict[str, Any], domains: list[str]) -> dict[str, int] | str:
+def _reference_in(private: Path, info: dict[str, Any], domains: list[str]) -> dict[str, int] | str:
     """The reference scores from the private store, or the reason they cannot be used."""
     key = info.get("reference_key")
-    path = (st.private / str(key)).resolve()
-    if not isinstance(key, str) or not path.is_relative_to(st.private.resolve()) or not path.is_file():
+    path = (private / str(key)).resolve()
+    if not isinstance(key, str) or not path.is_relative_to(private.resolve()) or not path.is_file():
         return "the reference scores are missing from the private store"
     try:
         return _scores(json.loads(path.read_text(encoding="utf-8")).get("scores"), domains)
     except (OSError, ValueError, AttributeError, ExerciseError):
         return "the reference scores in the private store do not cover the framework domains"
+
+
+def _reference(st: State, info: dict[str, Any], domains: list[str]) -> dict[str, int] | str:
+    return _reference_in(st.private, info, domains)
 
 
 @auto_step(STEP_RESULT, per="exercise")
@@ -268,6 +273,46 @@ def calibration_result(st: State, subject: str, now: datetime) -> list[dict[str,
          "renewal_months": st.standards["rules"]["calibration"]["renewal_months"]},
         id=signoff.input_sha256({"calibration_result": subject})[:32], at=stamp))
     return out
+
+
+# --- the observer's detail: how they score against the reference (decision 0032) ------------------------------
+
+
+def _signed_on(private: Path, signoff_id: Any, domains: list[str]) -> dict[str, int] | None:
+    """The scores in one stored sign-off, never its notes; None when it is gone or incomplete."""
+    if not (isinstance(signoff_id, str) and _SIGNOFF_ID.match(signoff_id)):
+        return None
+    try:
+        fields = json.loads((private / "signoffs" / f"{signoff_id}.json").read_text(encoding="utf-8"))["fields"]
+        return {d: fields[d]["score"] for d in domains}
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def observer_detail(private: Path, log: list[dict[str, Any]], observer: str, domains: list[str],
+                    today: date) -> dict[str, Any] | None:
+    """An observer's last `DETAIL_EXERCISES` results: agreement per exercise from the events, and their own score minus
+    the reference per domain, computed when asked from the two private documents that already exist, so the difference
+    is kept nowhere. It is an average across exercises and names no exercise or recording. None if never scored."""
+    results = [e for e in log if e["kind"] == "calibration" and e["payload"].get("observer") == observer]
+    if not results:
+        return None
+    infos = {e["subject_uri"]: e["payload"].get("attrs") or {} for e in log
+             if e["kind"] == "subject" and e["payload"].get("subject_kind") == "exercise"}
+    recent = sorted(results, key=lambda e: e["at"])[-DETAIL_EXERCISES:]
+    pairs = []
+    for e in recent:
+        scores = _signed_on(private, e["payload"].get("signoff_id"), domains)
+        reference = _reference_in(private, infos.get(e["payload"].get("exercise")) or {}, domains)
+        if scores is not None and not isinstance(reference, str):
+            pairs.append((scores, reference))
+    passed = [e["at"][:10] for e in results if e["payload"].get("passed") is True]
+    renew = clearer_renewal({}, observer, {"kind": "instructor"}, log, today)
+    return {"exercises": [{"at": e["at"][:10], "within_one_share": e["payload"].get("within_one_share"),
+                           "exact_share": e["payload"].get("exact_share"), "passed": e["payload"].get("passed") is True}
+                          for e in recent],
+            "bias": rules.calibration_bias(pairs), "counted": len(pairs),
+            "last_passed": max(passed, default=None), "renew_by": renew.isoformat() if renew else None}
 
 
 # --- recalibration: the head's page when a clearer's calibration lapses or is about to -----------------------

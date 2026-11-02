@@ -104,7 +104,7 @@ def event(kind, uri, payload, actor="tm:person/owner"):
 
 
 @pytest.mark.parametrize("name, ident", [
-    ("event", "event@4"), ("subject", "subject@2"), ("audit", "audit@1"), ("coaching-cycle", "coaching-cycle@1"),
+    ("event", "event@5"), ("subject", "subject@2"), ("audit", "audit@1"), ("coaching-cycle", "coaching-cycle@1"),
     ("cpd", "cpd@1"), ("outcome", "outcome@1"), ("bench-decision", "bench-decision@1"),
     ("outcome-import", "outcome-import@1"), ("clearance", "clearance@1"), ("people", "people@1"),
 ])
@@ -113,7 +113,7 @@ def test_contract_ids(name, ident):
 
 
 def test_event_v4_adds_exactly_the_outcome_kind_and_v3_is_kept():
-    new, v3 = contract("event.schema.json"), contract("v3/event.schema.json")
+    new, v3 = contract("v4/event.schema.json"), contract("v3/event.schema.json")
     assert (new["$id"], v3["$id"]) == ("tm:contract/event@4", "tm:contract/event@3")
     assert "outcome" in new["properties"]["kind"]["enum"] and "outcome" not in v3["properties"]["kind"]["enum"]
     assert sorted(set(new["properties"]["kind"]["enum"]) - {"outcome"}) == sorted(v3["properties"]["kind"]["enum"])

@@ -5,10 +5,17 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
-from . import app, config, daily, devsign, events, pilot, roster, setup, staffing, standards
+import yaml
+
+from . import app, config, daily, devsign, events, pilot, requests, roster, setup, staffing, standards
+from .audition import AuditionError
+from .course import CourseError
+from .matching import MatchError
+from .feeds import FeedError
+from .schedule import ScheduleError
 from .flows.bench import BenchError, request_bench
 from .flows.calibration import ExerciseError, open_exercise
 from .flows.override import OverrideError, request_override
@@ -38,6 +45,20 @@ def _build_parser() -> argparse.ArgumentParser:
     v.add_argument("path", type=Path)
     r = sub.add_parser("check-roster", help="check a roster file against tm:contract/roster@2")
     r.add_argument("path", type=Path)
+    q = sub.add_parser("check-questions", help="check a train-the-trainer session 2 question set against its unit")
+    q.add_argument("path", type=Path)
+    cd = sub.add_parser("check-draft", help="check a Claude button's draft, a session record or a card's command "
+                        "(draft@1, claude-session@1, command@1) against its contract and button (decision 0029)")
+    cd.add_argument("path", type=Path)
+    fl = sub.add_parser("check-failure-log", help="check a train-the-trainer session 3 failure log against the lab")
+    fl.add_argument("path", type=Path)
+    fl.add_argument("--catalogue", type=Path, required=True,
+                    help="the lab's staff/catalogue.yaml (or a unit file): its failure_catalogue")
+    cs = sub.add_parser("compare-scores", help="train-the-trainer session 5: scores of reference recordings against the "
+                                               "reference, domain by domain (formative, not a calibration)")
+    cs.add_argument("path", type=Path)
+    cs.add_argument("--reference", type=Path, required=True, help="the reference scores, kept in the private store")
+    cs.add_argument("--out", type=Path, help="write the comparison here (the session's evidence)")
     for name, help_ in STORE_COMMANDS.items():
         p = _store_parser(sub, name, help_)
         if name == "next":
@@ -75,6 +96,58 @@ def _build_parser() -> argparse.ArgumentParser:
     io = _store_parser(sub, "import-outcomes",
                        "import an outcome-import@1 file (aggregates per delivery; any learner field refuses the file)")
     io.add_argument("file", type=Path)
+    rq = _store_parser(sub, "request", "a programme someone asks the training function to staff (decision 0034): new, "
+                                       "propose, confirm, decline, withdraw, status")
+    rq.add_argument("action", choices=["new", "propose", "confirm", "decline", "withdraw", "status"])
+    rq.add_argument("target", nargs="?", help="new: the request page's saved file; otherwise the request id")
+    rq.add_argument("--requester", help="new: the mailbox the status goes back to")
+    rq.add_argument("--instructor", help="propose: tm:instructor/<id>")
+    rq.add_argument("--reason", choices=list(requests.REASONS), help="decline")
+
+    au = _store_parser(sub, "audition", "a candidate's audition on the clearance rubric, kept apart from the instructor "
+                                        "record (decision 0025): new, assign, replace, score, status, result, decide, "
+                                        "carry")
+    au.add_argument("action", choices=["new", "assign", "replace", "score", "status", "result", "decide", "carry"])
+    au.add_argument("audition", nargs="?", help="the audition id (every action but new)")
+    au.add_argument("--unit", help="new: sl:unit/<slug>@<n>")
+    au.add_argument("--mode", help="new: in-person, remote or hybrid")
+    au.add_argument("--slice", help="new: the 15-minute slice of the lab the candidate teaches")
+    au.add_argument("--candidate", help="new: the candidate's name (kept only in identities/auditions.yaml)")
+    au.add_argument("--observer", action="append", default=[], help="assign (twice), score: tm:instructor/<id>")
+    au.add_argument("--form", type=Path, help="score: the observer's filled form.yaml")
+    au.add_argument("--decision", choices=["hired", "not-hired"], help="decide")
+    au.add_argument("--reasons", help="decide: the panel's reasons; replace: why the observer is replaced")
+    au.add_argument("--leaving", help="replace: the observer who drops out, before they have scored")
+    au.add_argument("--joining", help="replace: their replacement, from the observer pool")
+    au.add_argument("--by", help="decide: the panel chair, tm:person/<id>")
+    au.add_argument("--instructor", help="carry: the hired candidate's tm:instructor/<id>, once registered")
+    au.add_argument("--on", help="the day, YYYY-MM-DD (default: today)")
+    sch = _store_parser(sub, "import-schedule", "check a calendar export of sessions (tm:contract/schedule@1) and keep "
+                                                 "it as inputs/schedule.yaml (decision 0027)")
+    sch.add_argument("file", type=Path)
+    fd = _store_parser(sub, "import-feed", "check a lab feed (tm:contract/release-status@1 or results-received@1) and "
+                                           "keep it under inputs/ (decision 0028); the daily job also drains inbox/")
+    fd.add_argument("file", type=Path)
+    sm = _store_parser(sub, "staffing-match", "who may teach a unit in a mode on a programme's dates, who is free and "
+                                              "their travel load (decision 0026); writes views/staffing-match.html")
+    sm.add_argument("--unit", required=True)
+    sm.add_argument("--mode", required=True)
+    sm.add_argument("--from", dest="start", required=True, help="first day, YYYY-MM-DD")
+    sm.add_argument("--to", dest="end", required=True, help="last day, YYYY-MM-DD")
+    sm.add_argument("--region", help="where the programme is, ISO code (IE, US-CA)")
+    sm.add_argument("--partner", help="the partner organisation the programme is for, tm:org/<id>")
+    sm.add_argument("--all", action="store_true", help="include blocked instructors")
+    co = _store_parser(sub, "course", "the train-the-trainer course record: take a session's evidence in (check, store, "
+                                      "record), record it by hand, or show a participant's sessions "
+                                      "(docs/train-the-trainer/DESIGN.md, decision 0030)")
+    co.add_argument("action", choices=["intake", "record", "status"])
+    co.add_argument("file", nargs="?", type=Path, help="intake: the evidence file (a scan, or the session's YAML)")
+    co.add_argument("--instructor", required=True, help="tm:instructor/<id>")
+    co.add_argument("--session", help="intake, record: a session id from standards/train-the-trainer.yaml")
+    co.add_argument("--evidence-ref", help="record: the private-store key of the session's evidence")
+    co.add_argument("--on", help="intake, record: the day the session ran, YYYY-MM-DD")
+    co.add_argument("--catalogue", type=Path, help="intake, lab-facilitation: the lab's staff/catalogue.yaml")
+    co.add_argument("--reference", help="intake, rubric-scoring: the private-store key of the reference scores")
     ing = _store_parser(sub, "ingest", "apply a driver receipt (sign-offs arrive only inside a receipt)")
     ing.add_argument("receipt", type=Path)
     ex = _store_parser(sub, "open-exercise", "open a calibration exercise (head of training): reference scores go to the store")
@@ -109,6 +182,10 @@ def _build_parser() -> argparse.ArgumentParser:
     sim.add_argument("--weeks", type=int, default=26, help="how many weeks to simulate (default 26)")
     sim.add_argument("--end", default=None, help="the last simulated day, YYYY-MM-DD (default: today)")
     sim.add_argument("--reset", action="store_true", help="replace a previous simulation in --store")
+    ck = sub.add_parser("claude-kit", help="write the Claude buttons' deployment files (agents, environment, drafting "
+                        "requests, prompts, manifest) from standards/chains.yaml (decision 0029)")
+    ck.add_argument("--out", type=Path, required=True)
+    ck.add_argument("--connector", action="append", default=[], help="name=https://... for a connector URL IT sets")
     ho = _store_parser(sub, "handoff", "render the expert-to-session handoff for a unit and list what it still lacks")
     ho.add_argument("--unit", required=True, help="sl:unit/<slug>@<version>")
     pp = _store_parser(sub, "paper", "write the printable run sheet and rubric for a unit (paper fallback, decision 0022)")
@@ -118,7 +195,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ax = _store_parser(sub, "audit-export", "a quarter's audit samples and their agreement as JSON (exports/)")
     ax.add_argument("--quarter", required=True, help="the quarter, YYYYQn (e.g. 2026Q3)")
     _store_parser(sub, "views", "rebuild the index and write the read views (views/: clearance matrix, coaching logs, "
-                  "quality review, instructor records)")
+                  "quality review, monthly outcomes, instructor records)")
     _store_parser(sub, "index", "rebuild the disposable SQLite index (index/teachermodel.sqlite) from the event log")
     gt = _store_parser(sub, "gates", "the spec's phase gates and acceptance criteria, computed from the store (read only)")
     gt.add_argument("--on", default=None, help="the day to judge on, YYYY-MM-DD (default: the newest event's day)")
@@ -246,26 +323,220 @@ def _store_command(args: argparse.Namespace) -> int:
         return staffing.EXIT_CODES[response["verdict"]]
     elif args.cmd == "ingest":
         return _finish(app.do_ingest(private, args.receipt))
+    elif args.cmd == "import-schedule":
+        from . import schedule
+
+        got = schedule.import_schedule(private, args.file, setup.load_settings(private))
+        print(f"import-schedule: {len(got.sessions)} session(s), exported {got.exported_at}")
+    elif args.cmd == "import-feed":
+        from . import feeds
+
+        got = feeds.import_feed(private, args.file)
+        print(f"import-feed: {got.schema} of {got.at} kept as {got.path.relative_to(private).as_posix()}")
+    elif args.cmd == "staffing-match":
+        from . import matching
+
+        request = {"unit": args.unit, "mode": args.mode, "start": date.fromisoformat(args.start),
+                   "end": date.fromisoformat(args.end), "region": args.region, "partner": args.partner}
+        rows, view = matching.staffing_match(private, request, include_blocked=args.all)
+        for r in rows:
+            print(f"{r.verdict:5}  {r.instructor:28}  expires {str(r.expires or '-'):10}  "
+                  f"{'booked ' + ','.join(r.booked) if r.booked else 'free':24}  travel {r.travel_share:.0%}"
+                  + ("  OVER" if r.travel_flag else ""))
+        print(f"staffing-match: {len(rows)} instructor(s); view in {view}")
+    elif args.cmd == "course":
+        from . import course
+
+        if args.action == "intake":
+            if not (args.file and args.session and args.on):
+                raise course.CourseError("course intake needs the file, --session and --on (the day the session ran)")
+            got = course.intake(private, args.instructor, args.session, args.file, date.fromisoformat(args.on),
+                                app.load_state(private).registrations, datetime.now(timezone.utc).replace(microsecond=0),
+                                catalogue=args.catalogue, reference=args.reference)
+            if not got.stored:
+                for p in got.problems:
+                    print(p, file=sys.stderr)
+                print(f"course: {args.session} returned: {len(got.problems)} "
+                      f"{'problem' if len(got.problems) == 1 else 'problems'} to send back; nothing stored or recorded")
+                return 1
+            print(f"course: {args.session} stored as {got.key}; recorded on {args.on} for {args.instructor}")
+        elif args.action == "record":
+            if not (args.session and args.evidence_ref):
+                raise course.CourseError("course record needs --session and --evidence-ref")
+            if not args.on:
+                raise course.CourseError("course record needs --on, the day the session ran")
+            if ".." in args.evidence_ref or not (private / args.evidence_ref).is_file():
+                raise course.CourseError(f"{args.evidence_ref} is not in the private store; store the evidence "
+                                         "first, or take it in with `course intake`")
+            on = date.fromisoformat(args.on)
+            course.record(private, args.instructor, args.session, args.evidence_ref, on,
+                          app.load_state(private).registrations)
+            print(f"course: {args.session} recorded for {args.instructor} on {on}")
+        else:
+            rows = course.status(private, args.instructor)
+            for r in rows:
+                print(f"{r['recorded']:10}  {r['session']:18}  {r['title']}")
+            done = sum(r["recorded"] != "missing" for r in rows)
+            print(f"course: {done} of {len(rows)} sessions recorded for {args.instructor}")
+    elif args.cmd == "audition":
+        return _audition(private, args)
+    elif args.cmd == "request":
+        return _request(private, args)
     else:  # tick
         for rep in app.do_tick(private):
             _print(rep, details=rep.summary.startswith("next:"))
     return 0
 
 
+def _request(private: Path, args: argparse.Namespace) -> int:
+    """`teachermodel request`: exit 0 done, 1 refused with the reasons."""
+    try:
+        if args.action == "status":
+            found = requests.state(list(events.read(private / app.EVENT_LOG)))
+            for rid, r in sorted(found.items()):
+                if args.target in (None, rid):
+                    print(f"{rid}  {r['stage']:<10} {r['unit']} {r['mode']} {r['from']} to {r['to']}"
+                          f"  reply by {r['reply_by']}" + (f"  {r['instructor']}" if r.get("instructor") else ""))
+            return 0
+        if not args.target:
+            raise requests.RequestError(f"{args.action} needs {'a file' if args.action == 'new' else 'a request id'}")
+        if args.action == "new":
+            made = requests.new(private, json.loads(Path(args.target).read_text(encoding="utf-8")), args.requester or "")
+            print(f"{made.request}: {'received' if made.created else 'already in'}")
+        elif args.action == "propose":
+            print(f"{args.target}: proposed {args.instructor} ({requests.propose(private, args.target, args.instructor or '')})")
+        elif args.action == "confirm":
+            print(f"{args.target}: confirmed ({requests.confirm(private, args.target)})")
+        elif args.action == "decline":
+            requests.decline(private, args.target, args.reason or "")
+            print(f"{args.target}: declined")
+        else:
+            requests.withdraw(private, args.target)
+            print(f"{args.target}: withdrawn")
+    except (requests.RequestError, OSError, ValueError) as exc:
+        print(f"refused: {exc}", file=sys.stderr)
+        return 1
+    return 0
+
+
+def _audition(private: Path, args: argparse.Namespace) -> int:
+    from . import audition as au
+
+    on = date.fromisoformat(args.on) if args.on else date.today()
+    if args.action != "new" and not args.audition:
+        raise au.AuditionError(f"audition {args.action} needs the audition id")
+    if args.action == "new":
+        missing = [f"--{k}" for k in ("unit", "mode", "slice", "candidate") if not getattr(args, k)]
+        if missing:
+            raise au.AuditionError("audition new needs " + ", ".join(missing))
+        made = au.open_audition(private, args.unit, args.mode, args.slice, args.candidate, on)
+        print(f"audition: opened {made}; the pack and a blank form.yaml are in auditions/{made}/")
+    elif args.action == "assign":
+        au.assign(private, args.audition, args.observer, on)
+        print(f"audition: {args.audition} assigned to {', '.join(sorted(args.observer))} on {on}")
+    elif args.action == "replace":
+        if not (args.leaving and args.joining and args.reasons):
+            raise au.AuditionError("audition replace needs --leaving, --joining and --reasons")
+        au.replace(private, args.audition, args.leaving, args.joining, args.reasons, on)
+        print(f"audition: {args.leaving} replaced by {args.joining} on {args.audition}")
+    elif args.action == "score":
+        if len(args.observer) != 1 or not args.form:
+            raise au.AuditionError("audition score needs one --observer and --form")
+        au.score(private, args.audition, args.observer[0], yaml.safe_load(args.form.read_text(encoding="utf-8")))
+        print(f"audition: {args.observer[0]}'s form recorded for {args.audition}")
+    elif args.action == "status":
+        print(json.dumps(au.status(private, args.audition), indent=2))
+    elif args.action == "result":
+        doc = au.result(private, args.audition)
+        print(f"audition: evidence for the panel in auditions/{args.audition}/result.md (overall mean "
+              f"{doc['overall_mean']}; observers within one on {doc['agreement_within_one']:.0%} of domains)")
+    elif args.action == "decide":
+        if not (args.decision and args.reasons and args.by):
+            raise au.AuditionError("audition decide needs --decision, --reasons and --by")
+        au.decide(private, args.audition, args.decision, args.reasons, args.by, on)
+        print(f"audition: {args.audition} decided {args.decision}")
+    else:
+        if not args.instructor:
+            raise au.AuditionError("audition carry needs --instructor")
+        print(f"audition: starting plan written to {au.carry(private, args.audition, args.instructor)}")
+    return 0
+
+
+def _when(text: str | None, store: Path | None = None) -> datetime:
+    """--now as an aware time; without it, now (UTC), or for a simulated store the morning after its last day."""
+    if text:
+        when = datetime.fromisoformat(text)
+        return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+    if store is not None and (store / "events" / "events.jsonl").is_file():
+        lines = (store / "events" / "events.jsonl").read_text(encoding="utf-8").splitlines()
+        last = max(json.loads(line)["at"] for line in lines if line.strip())
+        return datetime.fromisoformat(last[:10] + "T07:00:00+00:00") + timedelta(days=1)
+    return datetime.now(timezone.utc).replace(microsecond=0)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
-    if args.cmd in ("validate", "verify-events", "check-roster"):
+    if args.cmd in ("validate", "verify-events", "check-roster", "check-questions", "check-failure-log", "check-draft"):
         if args.cmd == "validate":
             errors = standards.check_standards()
         elif args.cmd == "verify-events":
             errors = events.verify(args.path)
+        elif args.cmd == "check-questions":
+            from . import course
+
+            errors = course.question_set_errors(yaml.safe_load(args.path.read_text(encoding="utf-8")))
+        elif args.cmd == "check-draft":
+            from . import feeds
+
+            try:
+                errors = feeds.problems(json.loads(args.path.read_text(encoding="utf-8")))
+            except ValueError as exc:
+                errors = [f"{args.path.name}: not JSON ({exc})"]
+        elif args.cmd == "check-failure-log":
+            from . import course
+
+            errors = course.failure_log_errors(yaml.safe_load(args.path.read_text(encoding="utf-8")),
+                                               yaml.safe_load(args.catalogue.read_text(encoding="utf-8")))
         else:
             errors = roster.check_roster(roster.load(args.path))
         for e in errors:
             print(e, file=sys.stderr)
         print("ok" if not errors else f"{len(errors)} problem(s)")
         return 1 if errors else 0
+
+    if args.cmd == "compare-scores":
+        from . import course
+
+        rows, errors = course.compare_scores(yaml.safe_load(args.path.read_text(encoding="utf-8")),
+                                             yaml.safe_load(args.reference.read_text(encoding="utf-8")))
+        for e in errors:
+            print(e, file=sys.stderr)
+        if errors:
+            print(f"{len(errors)} problem(s)")
+            return 1
+        for r in rows:
+            print(f"{r['recording']}: exact {r['exact']:.0%}, within one point {r['within_one']:.0%}")
+            for d in r["domains"]:
+                print(f"  {d['domain']:24} {d['score']}  reference {d['reference']}  {d['difference']:+d}")
+        bar = standards.load_standards()["rules"]["calibration"]
+        print(f"for comparison only: calibration (W5) asks for {bar['within_one_point_share']:.0%} within one point and "
+              f"{bar['exact_agreement_share']:.0%} exact; this is not a calibration")
+        if args.out:
+            args.out.write_text(yaml.safe_dump({"recordings": rows}, sort_keys=False), encoding="utf-8", newline="\n")
+        return 0
+
+    if args.cmd == "claude-kit":
+        from . import claudekit
+
+        try:
+            overrides = dict(c.split("=", 1) for c in args.connector)
+            changed = claudekit.write(args.out, overrides)
+        except (claudekit.KitError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(f"claude-kit: {len(changed)} file(s) written to {args.out}")
+        return 0
 
     if args.cmd == "dev-simulate":
         from . import simulate
@@ -282,7 +553,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         return _store_command(args)
     except (config.ConfigError, setup.SetupError, app.AppError, pilot.PilotError, devsign.DevSignError, ExerciseError,
-            QualityError, BenchError, OverrideError) as exc:
+            QualityError, BenchError, OverrideError, AuditionError, MatchError, CourseError, ScheduleError,
+            FeedError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
 

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/programme-request@1",
+  "title": "A request to staff a programme (the file the request page saves)",
+  "description": "What a programme manager asks for (decision 0034). It arrives by mail through the sign-off mailbox, whose connector vouches for the sender, or by `teachermodel request new`. Region is required unless the mode is remote (`requests.problems` checks that and the dates). It names no instructor: who teaches is the training function's to propose.",
+  "type": "object",
+  "required": ["schema", "unit", "mode", "from", "to", "expected_learners"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/programme-request@1"},
+    "unit": {"type": "string", "pattern": "^sl:unit/[a-z0-9-]+@[0-9]+$"},
+    "mode": {"enum": ["in-person", "remote", "hybrid"]},
+    "from": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "to": {"type": "string", "format": "date", "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+    "region": {"type": "string", "pattern": "^[A-Z]{2}$"},
+    "partner": {"type": "string", "pattern": "^tm:org/[a-z0-9-]+$"},
+    "expected_learners": {"type": "integer", "minimum": 1},
+    "programme": {"type": "string", "minLength": 1, "maxLength": 120, "description": "The requester's name for the programme, in their words"}
+  }
+}

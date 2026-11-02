@@ -23,6 +23,7 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 PAGE = Path(__file__).with_name("tour_gui.html")
+MAX_BODY = 1_000_000  # far past any request the page sends; a longer body is read and thrown away
 Runner = Callable[[Any, Path, dict[str, str]], tuple[list[str], int, str]]
 
 
@@ -110,7 +111,25 @@ def make_server(tour: ModuleType, store: Path, *, port: int = 8765, audience: st
                 return self._send(200, target.read_bytes(), kind)
             return self._json(404, {"error": "not found"})
 
+        def _body(self) -> bytes:
+            """The whole request body, read before any answer: closing a socket with unread data sends a reset, which can
+            destroy a refusal on its way to the client. Empty when the length is nonsense or over MAX_BODY."""
+            try:
+                left = max(int(self.headers.get("Content-Length") or 0), 0)
+            except ValueError:
+                return b""
+            over, kept = left > MAX_BODY, bytearray()
+            while left:
+                chunk = self.rfile.read(min(left, 65536))
+                if not chunk:
+                    break
+                left -= len(chunk)
+                if not over:
+                    kept += chunk
+            return bytes(kept)
+
         def do_POST(self) -> None:  # noqa: N802 - the base class's name
+            raw = self._body()
             origin = self.headers.get("Origin")
             if not self._allowed_host() or (origin and urlparse(origin).netloc != self.headers.get("Host")):
                 return self._json(403, {"error": "this server answers only to its own page"})
@@ -119,7 +138,7 @@ def make_server(tour: ModuleType, store: Path, *, port: int = 8765, audience: st
             if not (self.headers.get("Content-Type") or "").startswith("application/json"):
                 return self._json(415, {"error": "send JSON"})
             try:
-                body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+                body = json.loads(raw or b"{}")
                 stop = tour.STOPS[int(body["stop"]) - 1] if int(body["stop"]) >= 1 else None
                 item = stop.show[int(body["index"])] if stop else None
             except (ValueError, KeyError, IndexError, TypeError):

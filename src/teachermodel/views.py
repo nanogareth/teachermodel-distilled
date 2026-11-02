@@ -9,6 +9,11 @@ Built from the SQLite index (index.py), which is rebuilt first, into `<store>/vi
     quality-review.html            per instructor and unit: outcome summaries against the cohort baseline (below
                                    quality.min_learners_for_metric: "insufficient data"), the monthly rubric average, the
                                    observer count and open triggers
+    monthly-outcomes.html          per month and instructor, newest month first: deliveries measured, learners assessed, the
+                                   learner-weighted score and baseline and the gap; deliveries below
+                                   quality.min_learners_for_metric are counted with their learners as "too small to
+                                   read" and add no figures.
+                                   From a lab grader export (outcome-import@1) the score is the pass rate in percent
     instructors/<slug>.html        the instructor's own record: clearances, observations (scores), coaching cycles, dry runs,
                                    CPD, level changes and bench decisions
 
@@ -39,6 +44,14 @@ STYLE = (
     "text-align:left;vertical-align:top}th{background:#f0f1f8}.flag{background:#fff3cd}.bad{background:#fde2e1}"
     ".ok{background:#e6f4ea}.muted{color:#777}.filters{margin:.5rem 0}.filters label{margin-right:1rem}"
     "footer{margin-top:2rem;font-size:.8rem;color:#555}"
+    # On a phone a table's rows stack as label and value, so the page never runs off the screen.
+    "@media (max-width:640px){body{margin:1rem}table.stack,table.stack tbody,table.stack tr{display:block}"
+    "table.stack thead{display:none}table.stack tr{border:1px solid #ccc;margin:.5rem 0;padding:.25rem .45rem}"
+    "table.stack td{display:block;border:0;padding:.15rem 0;text-align:right;overflow-wrap:anywhere}"
+    "table.stack td:empty{display:none}table.stack td::before{content:attr(data-label);float:left;max-width:50%;"
+    'font-weight:600;text-align:left}table.stack td::after{content:"";display:block;clear:both}'
+    "table.stack td[data-mode]{text-align:left;padding:.3rem .45rem;margin:.25rem 0}"
+    "table.stack td[data-mode]::before{float:none;display:block;max-width:none}}"
 )
 FOOTER = ("A record of the technical training function (decision 0005): used to coach and to decide clearances and bench "
           "reviews, never for performance review. Ids only; names stay in the private store.")
@@ -49,7 +62,8 @@ def _slug(uri: str | None) -> str:
 
 
 def _page(title: str, body: str, as_of: str, script: str = "") -> str:
-    return (f'<!doctype html>\n<html lang="en"><head><meta charset="utf-8"><title>{_e(title)}</title>'
+    return (f'<!doctype html>\n<html lang="en"><head><meta charset="utf-8">'
+            f'<meta name="viewport" content="width=device-width, initial-scale=1"><title>{_e(title)}</title>'
             f"<style>{STYLE}</style></head><body><h1>{_e(title)}</h1><p class=\"muted\">As of {_e(as_of)}, from the "
             f"event log through the index.</p>{body}<footer>{_e(FOOTER)}</footer>"
             + (f"<script>{script}</script>" if script else "") + "</body></html>\n")
@@ -62,8 +76,9 @@ def _table(headers: list[str], rows: list[list[Any]], classes: list[str] | None 
     for i, row in enumerate(rows):
         cls = f' class="{classes[i]}"' if classes and classes[i] else ""
         extra = f" {attrs[i]}" if attrs and attrs[i] else ""
-        body.append(f"<tr{cls}{extra}>" + "".join(f"<td>{c}</td>" for c in row) + "</tr>")
-    return f"<table><thead><tr>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>"
+        body.append(f"<tr{cls}{extra}>" + "".join(f'<td data-label="{_e(h)}">{c}</td>'
+                                                  for h, c in zip(headers, row)) + "</tr>")
+    return f'<table class="stack"><thead><tr>{head}</tr></thead><tbody>{"".join(body)}</tbody></table>'
 
 
 def _rows(con: sqlite3.Connection, sql: str, *args: Any) -> list[sqlite3.Row]:
@@ -97,9 +112,10 @@ def clearance_matrix(con: sqlite3.Connection, on: date, rules: dict[str, Any]) -
             modes.add(mode)
     columns = [(u, m) for u in sorted(units) for m in sorted(modes)]
 
-    def cell(c: sqlite3.Row | None, mode: str) -> str:
+    def cell(c: sqlite3.Row | None, unit: str, mode: str) -> str:
+        label = f'data-label="{_e(_slug(unit))}, {_e(mode)}"'
         if c is None:
-            return f'<td data-mode="{_e(mode)}" class="muted">no clearance</td>'
+            return f'<td data-mode="{_e(mode)}" class="muted" {label}>no clearance</td>'
         expires = date.fromisoformat(c["expires"]) if c["expires"] else None
         cls = "bad" if c["outcome"] not in ("cleared", "cleared_with_conditions") or (expires and expires < on) else \
             "flag" if expires and (expires - on).days <= warn else "ok"
@@ -112,15 +128,15 @@ def clearance_matrix(con: sqlite3.Connection, on: date, rules: dict[str, Any]) -
                 + (f"<br>recheck {_e(c['recheck'])}" if c["recheck"] else "")
                 + f"<br>scope: {_e('; '.join(scope) or 'any')}<br>clearers: {_e(_slug(c['clearer_1']))}, "
                   f"{_e(_slug(c['clearer_2']))}" + ("<br>founding" if c["founding"] else ""))
-        return f'<td data-mode="{_e(mode)}" class="{cls}">{text}</td>'
+        return f'<td data-mode="{_e(mode)}" class="{cls}" {label}>{text}</td>'
 
     head = "".join(f'<th data-mode="{_e(m)}">{_e(_slug(u))}<br>{_e(m)}</th>' for u, m in columns)
     body = []
     for i in instructors:
         regions = " ".join(json.loads(i["regions"] or "[]"))
-        row = "".join(cell(cells.get((i["uri"], u, m)), m) for u, m in columns)
+        row = "".join(cell(cells.get((i["uri"], u, m)), u, m) for u, m in columns)
         body.append(f'<tr data-type="{_e(i["type"])}" data-org="{_e(i["organisation"])}" data-regions="{_e(regions)}">'
-                    f"<td>{_e(_slug(i['uri']))}<br><span class=\"muted\">{_e(i['type'])}, {_e(i['level'])}"
+                    f"<td data-label=\"Instructor\">{_e(_slug(i['uri']))}<br><span class=\"muted\">{_e(i['type'])}, {_e(i['level'])}"
                     f"{', exited' if i['exited'] else ''}</span></td>{row}</tr>")
 
     def select(name: str, label: str, values: list[str]) -> str:
@@ -134,7 +150,7 @@ def clearance_matrix(con: sqlite3.Connection, on: date, rules: dict[str, Any]) -
                + select("mode", "Mode", sorted(modes)) + "</div>")
     legend = (f'<p><span class="ok">cleared</span> <span class="flag">expires within {warn} days</span> '
               '<span class="bad">expired or not cleared</span></p>')
-    table = f"<table><thead><tr><th>Instructor</th>{head}</tr></thead><tbody>{''.join(body)}</tbody></table>"
+    table = f'<table class="stack"><thead><tr><th>Instructor</th>{head}</tr></thead><tbody>{"".join(body)}</tbody></table>'
     return _page("Clearance matrix", filters + legend + table, on.isoformat(), MATRIX_SCRIPT)
 
 
@@ -204,6 +220,52 @@ def quality_review(con: sqlite3.Connection, on: date, rules: dict[str, Any]) -> 
     return _page("Quality review", intro + "".join(sections), on.isoformat())
 
 
+# --- monthly outcomes ---------------------------------------------------------------------------------------------
+
+
+def monthly_outcomes(con: sqlite3.Connection, on: date, rules: dict[str, Any]) -> str:
+    q = rules["quality"]
+    minimum, drop = q["min_learners_for_metric"], q["score_drop_points"]
+    months: dict[tuple[str, str], dict[str, Any]] = {}
+    for o in _rows(con, "SELECT * FROM outcomes WHERE delivered_on IS NOT NULL"):
+        m = months.setdefault((o["delivered_on"][:7], o["instructor"]),
+                              {"n": 0, "learners": 0, "score": 0.0, "baseline": 0.0, "few": 0, "few_learners": 0,
+                               "units": set()})
+        m["units"].add(_slug(o["unit"]))
+        learners = o["learners_assessed"] or 0
+        if learners < minimum or o["score"] is None or o["baseline"] is None:
+            m["few"] += 1
+            m["few_learners"] += learners
+            continue
+        m["n"] += 1
+        m["learners"] += learners
+        m["score"] += o["score"] * learners
+        m["baseline"] += o["baseline"] * learners
+    rows, classes = [], []
+    by_instructor = sorted(months.items(), key=lambda kv: kv[0][1])
+    for (month, uri), m in sorted(by_instructor, key=lambda kv: kv[0][0], reverse=True):  # stable: newest month first
+        if m["learners"]:
+            score, baseline = m["score"] / m["learners"], m["baseline"] / m["learners"]
+            gap = round(score, 1) - round(baseline, 1)
+            numbers = [_e(f"{score:.1f}"), _e(f"{baseline:.1f}"), _e(f"{gap:+.1f}")]
+        else:
+            gap = None
+            numbers = ['<span class="muted">insufficient data</span>', "", ""]
+        few = (f"{m['few']} deliver{'y' if m['few'] == 1 else 'ies'}, {m['few_learners']} learners" if m["few"]
+               else "none")
+        rows.append([_e(month), _e(_slug(uri)), _e(", ".join(sorted(m["units"]))), _e(m["n"]), _e(m["learners"]),
+                     *numbers, _e(few)])
+        classes.append("bad" if gap is not None and gap <= -drop else "")
+    intro = (f"<p>Per month and instructor, newest month first. The score and baseline are weighted by learners assessed "
+             f"and read only deliveries with at least {minimum} learners; smaller deliveries are counted, with their "
+             "learners, under Too small to read, and never measured. "
+             f"A month {drop} or more points below baseline is marked. When the outcomes come from a lab grader the score "
+             "is the pass rate in percent. A month is a summary for the quality review, which decides what it means.</p>")
+    table = _table(["Month", "Instructor", "Units", "Deliveries measured", "Learners measured", "Score", "Baseline",
+                    "Against baseline", "Too small to read"], rows, classes) if rows else         '<p class="muted">No outcome summaries.</p>'
+    return _page("Monthly outcomes", intro + table, on.isoformat())
+
+
 # --- instructor record --------------------------------------------------------------------------------------------
 
 
@@ -271,7 +333,8 @@ def build(private_dir: Path | str, *, root: Path = ROOT) -> app.Report:
         out = private / VIEWS
         files = {out / "clearance-matrix.html": clearance_matrix(con, on, rules),
                  out / "coaching-log.html": coaching_log(con, on, rules),
-                 out / "quality-review.html": quality_review(con, on, rules)}
+                 out / "quality-review.html": quality_review(con, on, rules),
+                 out / "monthly-outcomes.html": monthly_outcomes(con, on, rules)}
         for (coach,) in con.execute("SELECT DISTINCT coach FROM cycles WHERE coach IS NOT NULL ORDER BY coach"):
             files[out / f"coaching-log--{_slug(coach)}.html"] = coaching_log(con, on, rules, coach)
         for (uri,) in con.execute("SELECT uri FROM instructors ORDER BY uri"):

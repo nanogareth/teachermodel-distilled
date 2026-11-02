@@ -112,6 +112,32 @@ def test_another_host_another_origin_or_a_form_post_is_refused(server, method, p
     assert status in (403, 415) and calls == []
 
 
+def test_a_refusal_reaches_the_client_even_with_a_body_it_never_wanted(server):
+    """A refusal used to leave the body unread: closing a socket with unread data resets it, and the reset can destroy the
+    response in flight. A large body lost about one answer in four, so forty in a row do not pass by luck."""
+    srv, calls, _tour = server
+    big = {"stop": 3, "index": 0, "pad": "x" * 300_000}
+    for _ in range(40):
+        assert request(srv, "POST", "/api/run", big, {"Content-Type": "text/plain"})[0] == 415
+        assert request(srv, "POST", "/api/run", big, {"Origin": "http://evil.example"})[0] == 403
+        assert request(srv, "POST", "/elsewhere", big)[0] == 404
+    assert calls == []
+
+
+@pytest.mark.parametrize("length", ["-1", "not-a-number"])
+def test_a_nonsense_content_length_is_answered_at_once(server, length):
+    srv, calls, _tour = server
+    status, _ = request(srv, "POST", "/api/run", None, {"Content-Type": "application/json", "Content-Length": length})
+    assert status == 400 and calls == []
+
+
+def test_a_body_over_the_limit_is_not_read_and_runs_nothing(server, modules):
+    srv, calls, _tour = server
+    _, gui = modules
+    status, _ = request(srv, "POST", "/api/run", {"stop": 3, "index": 0, "pad": "x" * (gui.MAX_BODY + 1)})
+    assert status == 400 and calls == []
+
+
 def test_the_server_listens_on_this_machine_only(server):
     srv, _calls, _tour = server
     assert srv.server_address[0] == "127.0.0.1"

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/claude-session@1",
+  "title": "An acting button's session record (written by the relay; arrives through inbox/)",
+  "description": "Decision 0029. One Managed Agents session started by a button press: who pressed it, for which outbox action, and every write tool call with its approval. Inputs are kept as a hash, never as text, so nothing a call wrote is copied into the store. A call that ran must have been allowed by a person.",
+  "type": "object",
+  "required": ["schema", "session_id", "button", "action_id", "presser", "started_at", "ended_at", "calls", "outcome"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/claude-session@1"},
+    "session_id": {"type": "string", "pattern": "^ses[a-z]*_[A-Za-z0-9]+$"},
+    "button": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "action_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+    "presser": {"type": "string", "pattern": "^tm:(person|instructor)/[a-z0-9][a-z0-9-]*$"},
+    "started_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "ended_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "calls": {"type": "array", "items": {"$ref": "#/$defs/call"}},
+    "outcome": {"enum": ["completed", "denied", "failed", "budget-reached", "abandoned"]}
+  },
+  "$defs": {
+    "call": {
+      "type": "object",
+      "required": ["event_id", "server", "tool", "input_sha256", "decision", "decided_by", "decided_at", "result"],
+      "additionalProperties": false,
+      "properties": {
+        "event_id": {"type": "string", "pattern": "^sevt_[A-Za-z0-9]+$"},
+        "server": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "tool": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$"},
+        "input_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "decision": {"enum": ["allow", "deny"]},
+        "decided_by": {"type": "string", "pattern": "^tm:(person|instructor)/[a-z0-9][a-z0-9-]*$"},
+        "decided_at": {"type": "string", "format": "date-time"},
+        "result": {"enum": ["ok", "error", "not-run"]}
+      }
+    }
+  }
+}

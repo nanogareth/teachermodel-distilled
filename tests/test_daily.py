@@ -23,12 +23,20 @@ def _log(store):
     return (store / daily.LOG).read_text(encoding="utf-8").splitlines()
 
 
-def test_daily_ticks_and_logs_one_line(store, monkeypatch):
-    called = []
-    monkeypatch.setattr(daily.devsign, "autosign", lambda *a, **k: called.append(a))
+def test_daily_rebuilds_the_read_views_so_they_never_go_stale(store):
     rep = daily.daily(store, now=T0)
-    assert rep.ok and rep.summary.startswith("next:") and not called
-    assert _log(store) == [f"2026-10-27T07:30:00+00:00 tick ok: {rep.summary}"]
+    assert rep.ok and _log(store)[0].startswith("2026-10-27T07:30:00+00:00 views ok: views: ")
+    for name in ("monthly-outcomes.html", "quality-review.html", "clearance-matrix.html", "coaching-log.html"):
+        assert (store / "views" / name).is_file(), name
+
+
+def test_views_that_cannot_be_built_are_logged_and_the_tick_still_runs(store, monkeypatch):
+    def broken(*a, **k):
+        raise ValueError("index")
+
+    monkeypatch.setattr(daily.views, "build", broken)
+    rep = daily.daily(store, now=T0)
+    assert not rep.ok and "views FAILED: ValueError" in _log(store)[0] and " tick ok: " in _log(store)[-1]
 
 
 def test_daily_runs_dev_autosign_when_the_toggle_is_on(store, monkeypatch):

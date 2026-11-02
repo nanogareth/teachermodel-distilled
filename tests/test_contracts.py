@@ -47,7 +47,7 @@ def test_staffing_request_rejects_module_refs():
     assert list(v.iter_errors({**REQ, "unit": "tm:module/x"}))
 
 
-@pytest.mark.parametrize("name", ["staffing-check", "observation", "roster"])
+@pytest.mark.parametrize("name", ["staffing-check", "observation", "roster", "bookings"])
 def test_ids_are_v2_and_v1_kept(name):
     new = json.loads((ROOT / "contracts" / f"{name}.schema.json").read_text(encoding="utf-8"))
     old = json.loads((ROOT / "contracts" / "v1" / f"{name}.schema.json").read_text(encoding="utf-8"))
@@ -55,15 +55,16 @@ def test_ids_are_v2_and_v1_kept(name):
     assert old["$id"] == f"tm:contract/{name}@1"
 
 
-def test_event_is_v4_and_v1_v2_v3_kept():
+def test_event_is_v5_and_v1_to_v4_kept():
     def load(*parts):
         return json.loads(ROOT.joinpath("contracts", *parts).read_text(encoding="utf-8"))
 
-    new, v3 = load("event.schema.json"), load("v3", "event.schema.json")
+    new, v4, v3 = load("event.schema.json"), load("v4", "event.schema.json"), load("v3", "event.schema.json")
     v2, v1 = load("v2", "event.schema.json"), load("v1", "event.schema.json")
-    assert (new["$id"], v3["$id"], v2["$id"], v1["$id"]) == (
-        "tm:contract/event@4", "tm:contract/event@3", "tm:contract/event@2", "tm:contract/event@1")
-    kinds, v3_kinds, v2_kinds = (d["properties"]["kind"]["enum"] for d in (new, v3, v2))
+    assert (new["$id"], v4["$id"], v3["$id"], v2["$id"], v1["$id"]) == (
+        "tm:contract/event@5", "tm:contract/event@4", "tm:contract/event@3", "tm:contract/event@2", "tm:contract/event@1")
+    latest, kinds, v3_kinds, v2_kinds = (d["properties"]["kind"]["enum"] for d in (new, v4, v3, v2))
+    assert sorted(set(latest) - {"request"}) == sorted(kinds) and "request" not in kinds  # event@5 (decision 0034)
     assert "subject" in v3_kinds and "subject" not in v2_kinds
     assert sorted(set(v3_kinds) - {"subject"}) == sorted(v2_kinds)  # event@3 added exactly one kind (decision 0011)
     assert "outcome" in kinds and "outcome" not in v3_kinds
@@ -120,6 +121,7 @@ V1_SHA256 = {
     "roster.schema.json": "eca2b5c3904acd4c31f5d378c65db04927ce28275ca28b35add284f3debf2f74",
     "staffing-check.schema.json": "d758f50bd7cb24697b50945e09a6e6db1df4505c5a12e79ec570527166796726",
     "retention.schema.json": "4fdfa62b47213755888733d0cb38e720bc8eeeb318b67ebe522a0382e6315d40",
+    "bookings.schema.json": "ba3971d75c505de2b058682b1ff3760ef6e8544c226b7420927092e9a2122a29",
 }
 
 

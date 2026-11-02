@@ -108,7 +108,7 @@ details.ref > summary { font-weight: 600; }
  "signer": "tm:instructor/example-a",
  "role": "instructor",
  "input_sha256": "b1bc98818ad0543669154e56cf8357b79d6ce8524a11a71883ee5c085d7a7c80",
- "page_template_sha256": "69f99c608b53b1157dc3435f168186a7e9e265feaaa4f4db5184c60d2c1fe286",
+ "page_template_sha256": "1dbafdf45cdceac0d269e8e9e807390f51d89c4f78a1886f8733eb373fdcf148",
  "channel": {
   "kind": "mail",
   "to": "programme@example.test"
@@ -356,6 +356,11 @@ details.ref > summary { font-weight: 600; }
       return;
     }
     if (score === null) { errors.push(f.label + ': choose a score 1 to 4'); return; }
+    if (score === 'no') {
+      if (note === '') { errors.push(f.label + ': not observable: say why it could not be observed'); return; }
+      fields[f.name] = { not_observable: true, note: note };
+      return;
+    }
     if (note === '') { errors.push(f.label + ': evidence note required'); return; }
     v = { score: parseInt(score, 10), note: note };
     if (ts !== '') { v.timestamp = ts; }
