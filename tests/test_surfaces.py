@@ -68,7 +68,11 @@ def store(tmp_path_factory):
             encoding="utf-8")
         (folder / "result.yaml").write_text(yaml.safe_dump(
             {"id": "a-211a3a", "overall_mean": 2.6, "overall_meets_clearance_bar": False,
-             "domains_to_discuss": ["conceptual-questioning"]}), encoding="utf-8")
+             "domains_to_discuss": ["conceptual-questioning"],
+             "clearance_bar": {"domain_average": 2, "overall_mean": 3},
+             "domains": [{"domain": d, "scores": {A: a, D: b}, "average": (a + b) / 2}
+                         for d, a, b in (("technical-depth", 3, 3), ("conceptual-questioning", 1, 3))]}),
+            encoding="utf-8")
         course.record(s, A, "micro-teach", "evidence/ttt/a1c4f-micro-teach.pdf", date(2026, 10, 8),
                       app.load_state(s).registrations)
         yield s
@@ -79,8 +83,10 @@ def store(tmp_path_factory):
 @pytest.fixture(scope="module")
 def built(store):
     ctx = surfaces.context(store, NOW)
-    return ctx, {"this-week": surfaces.this_week(ctx), "coordinator-board": surfaces.coordinator_board(ctx),
-                 "my-record": surfaces.my_record(ctx, A)}
+    models = {"this-week": surfaces.this_week(ctx), "coordinator-board": surfaces.coordinator_board(ctx),
+              "my-record": surfaces.my_record(ctx, A)}
+    ctx.con.close()  # the models are plain data; an open index would block the next rebuild on Windows
+    return ctx, models
 
 
 def test_this_week_holds_the_heads_decisions_and_risks(built):
@@ -215,3 +221,20 @@ def test_the_coordinator_sees_results_received_and_unreadable_as_counts(store, t
     assert (rows["agent-loop-g1"]["received"], rows["agent-loop-g1"]["unreadable"]) == (18, None)
     seen = surfaces.project(board, "coordinator-board", "coordinator")
     assert {d["session"]: d["unreadable"] for d in seen["deliveries"]}["agent-loop-g2"] == 1
+
+
+# --- the head's This week page (surface_pages.py) --------------------------------------------------------------------
+
+def test_this_week_lists_the_sessions_ahead_and_what_it_waits_for(built):
+    _, m = built
+    week = m["this-week"]
+    assert [a["session"] for a in week["ahead"]] == ["onboarding-c4", "cohort12-agg-lab"]
+    assert {"kind": "results", "session": "agent-loop-g2", "programme": "cohort-11", "ended": "2026-10-27"} \
+        in week["waiting"]
+    assert week["release_check"]["state"] == "never"
+    assert week["decisions"]["auditions"][0]["domains"][1]["scores"] == {A: 1, D: 3}
+
+
+# --- the coordinator board and My record pages ---------------------------------------------------------------------------
+
+

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/outbox@1",
+  "title": "The outbox (private store outbox/outbox.json)",
+  "description": "Decision 0029. Every action the intervention chains would send as of a moment, derived afresh on each run from the conditions that hold. An action_id is a hash of chain, subject, anchor, step, kind and recipient, so it is the same on every run. Ids only: recipients are tm: ids or an unresolved role, never names or addresses. mode is dry-run: nothing is sent.",
+  "type": "object",
+  "required": ["schema", "mode", "as_of", "actions", "waiting"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/outbox@1"},
+    "mode": {"const": "dry-run"},
+    "as_of": {"type": "string", "format": "date-time"},
+    "actions": {"type": "array", "items": {"$ref": "#/$defs/action"}},
+    "waiting": {
+      "type": "array",
+      "description": "Chains whose condition has no source yet",
+      "items": {
+        "type": "object",
+        "required": ["chain", "title", "waiting_for"],
+        "additionalProperties": false,
+        "properties": {"chain": {"type": "string"}, "title": {"type": "string"}, "waiting_for": {"type": "string"}}
+      }
+    }
+  },
+  "$defs": {
+    "action": {
+      "type": "object",
+      "required": ["action_id", "chain", "instance", "step", "kind", "channel", "role", "to", "subject", "anchor", "due", "state", "policy"],
+      "additionalProperties": false,
+      "properties": {
+        "action_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+        "chain": {"type": "string", "pattern": "^C[0-9]+$"},
+        "instance": {"type": "string", "pattern": "^[0-9a-f]{16}$", "description": "The chain instance: chain, subject and anchor"},
+        "step": {"type": "string"},
+        "kind": {"enum": ["notify", "propose", "decide", "act", "escalate"]},
+        "channel": {"enum": ["chat.post", "calendar.propose", "signed-page", "claude.act"]},
+        "role": {"type": "string"},
+        "to": {"type": ["string", "null"], "pattern": "^tm:(person|instructor)/[a-z0-9][a-z0-9-]*$", "description": "null when no one holds the role"},
+        "subject": {"type": "string", "minLength": 1},
+        "anchor": {"type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+        "due": {"type": ["string", "null"], "pattern": "^\\d{4}-\\d{2}-\\d{2}$"},
+        "state": {"enum": ["due", "overdue", "escalated"]},
+        "policy": {"enum": ["approve", "auto-after-shadow", "approve-each-call", "person"]},
+        "button": {"type": "string"},
+        "facts": {"type": "object", "description": "What the message is about, as counts, dates and ids"}
+      }
+    }
+  }
+}

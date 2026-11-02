@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/chains@1",
+  "title": "Intervention chains and Claude buttons (standards/chains.yaml)",
+  "description": "Decision 0029. Each chain's condition is a pure function named here; its steps fall due relative to the condition's anchor date; buttons declare what Claude may read and, for acting buttons, write with a person approving each call.",
+  "type": "object",
+  "required": ["schema_version", "mode", "shadow_sends", "unattended_after_shadow", "chains", "connectors", "model", "buttons", "never"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {"const": 1},
+    "mode": {"const": "dry-run"},
+    "shadow_sends": {"type": "integer", "minimum": 1},
+    "unattended_after_shadow": {"type": "array", "items": {"enum": ["chat.post", "calendar.propose"]}},
+    "chains": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/chain"}},
+    "connectors": {"type": "object", "additionalProperties": {"$ref": "#/$defs/connector"}},
+    "model": {"type": "string", "pattern": "^claude-[a-z0-9-]+$"},
+    "buttons": {"type": "array", "items": {"$ref": "#/$defs/button"}},
+    "never": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 10}}
+  },
+  "$defs": {
+    "role": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "chain": {
+      "type": "object",
+      "required": ["id", "title", "condition", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^C[0-9]+$"},
+        "title": {"type": "string", "minLength": 3},
+        "condition": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "waiting_for": {"type": "string", "minLength": 10},
+        "escalate_after": {"type": ["integer", "null"], "minimum": 0},
+        "escalate_to": {"$ref": "#/$defs/role"},
+        "steps": {"type": "array", "items": {"$ref": "#/$defs/step"}}
+      }
+    },
+    "step": {
+      "type": "object",
+      "required": ["id", "kind", "to", "due_days"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "kind": {"enum": ["notify", "propose", "decide", "act"]},
+        "to": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/role"}},
+        "due_days": {"type": "integer"},
+        "button": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"}
+      }
+    },
+    "connector": {
+      "type": "object",
+      "required": ["title", "url"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {"type": "string"},
+        "url": {"type": ["string", "null"], "pattern": "^https://"}
+      }
+    },
+    "tools": {"type": "object", "additionalProperties": {"type": "array", "items": {"type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_]*$"}}},
+    "button": {
+      "type": "object",
+      "required": ["id", "title", "kind", "for", "effort", "reads", "task"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+        "title": {"type": "string", "minLength": 3},
+        "kind": {"enum": ["draft", "act"]},
+        "for": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/role"}},
+        "effort": {"enum": ["low", "medium", "high"]},
+        "reads": {"$ref": "#/$defs/tools"},
+        "writes": {"$ref": "#/$defs/tools"},
+        "task": {"type": "string", "minLength": 20}
+      }
+    }
+  }
+}

@@ -1,0 +1,228 @@
+# Intervention chains and Claude buttons (decision 0029). A chain starts when its condition holds; the condition is a pure function in
+# interventions.py (CONDITIONS), never a model. Each step falls due `due_days` after the condition's anchor date (an
+# instructor's trigger day, a session's first day, an observer assignment...); negative means before it. A step past due
+# plus `escalate_after` working days escalates to `escalate_to`. Days are operational defaults (decision 0002).
+#
+# Step kinds: notify (chat.post to Teams, owner 2026-10-30), propose (calendar.propose), decide (a signed page, never
+# the outbox), act (a Claude acting button: each write approved by the presser). Recipients are roles: head-of-training,
+# coordinator, dpo, lab-maintainer (people.yaml roles), and instructor, coach, lead, observer, owner (resolved from the
+# chain's subject). A role nobody holds is shown as unresolved on the Outbox page, never dropped.
+schema_version: 1
+mode: dry-run            # outbox@1: nothing is sent until delivery (G10) exists and the owner turns it on
+shadow_sends: 20         # per action kind, approved one by one before it may run unattended
+unattended_after_shadow: [chat.post, calendar.propose]   # owner 2026-10-30; tickets, CRM tasks, enrolments never
+
+chains:
+  - id: C1
+    title: Quality trigger
+    condition: quality-trigger
+    escalate_after: 3
+    escalate_to: head-of-training
+    steps:
+      - {id: tell, kind: notify, to: [coach, instructor], due_days: 0}
+      - {id: plan, kind: propose, to: [coach], due_days: 10, button: draft-coaching-plan}
+      - {id: reobserve, kind: notify, to: [coach], due_days: 30}
+  - id: C2
+    title: A session's lead not cleared, expiring or due a recheck
+    condition: session-at-risk
+    escalate_after: 1
+    escalate_to: head-of-training
+    steps:
+      - {id: tell, kind: notify, to: [lead, coordinator], due_days: -30}
+      - {id: book, kind: propose, to: [lead], due_days: -21, button: propose-slots}
+      - {id: cover, kind: decide, to: [head-of-training], due_days: -7, button: find-cover}
+      - {id: account, kind: act, to: [head-of-training], due_days: -7, button: crm-task}
+  - id: C3
+    title: Recheck missed (clearance lapsed)
+    condition: not-connected
+    waiting_for: "covered by C2: a lapsed clearance makes each session the instructor leads a not-cleared risk"
+    steps: []
+  - id: C4
+    title: Observer's calibration lapsed
+    condition: calibration-lapsed
+    escalate_after: 5
+    escalate_to: head-of-training
+    steps:
+      - {id: tell, kind: notify, to: [observer, coordinator], due_days: 0}
+      - {id: book, kind: propose, to: [observer], due_days: 0, button: propose-slots}
+  - id: C5
+    title: A session's lab not passing the release check
+    condition: lab-failing
+    escalate_after: 1
+    escalate_to: head-of-training
+    steps:
+      - {id: tell, kind: notify, to: [lead, coordinator, lab-maintainer], due_days: -21}
+      - {id: triage, kind: act, to: [lab-maintainer], due_days: -14, button: triage-lab}
+      - {id: decide, kind: decide, to: [head-of-training], due_days: -5}
+  - id: C6
+    title: No results for a delivery
+    condition: results-missing
+    escalate_after: 5
+    escalate_to: head-of-training
+    steps:
+      - {id: tell, kind: notify, to: [coordinator], due_days: 7}
+      - {id: ticket, kind: act, to: [coordinator], due_days: 10, button: grader-ticket}
+  - id: C7
+    title: Unreadable results
+    condition: results-unreadable
+    escalate_after: 5
+    escalate_to: head-of-training
+    steps:
+      - {id: ticket, kind: act, to: [coordinator], due_days: 0, button: grader-ticket}
+  - id: C8
+    title: A source not reporting
+    condition: source-stale
+    escalate_after: 5
+    escalate_to: head-of-training
+    steps:
+      - {id: tell, kind: notify, to: [owner], due_days: 0, button: remind-owner}
+  - id: C9
+    title: Observer form overdue on an audition
+    condition: audition-form-overdue
+    escalate_after: 3
+    escalate_to: head-of-training
+    steps:
+      - {id: remind, kind: notify, to: [observer], due_days: 3}
+      - {id: replace, kind: decide, to: [coordinator], due_days: 5, button: replacement-observer}
+  - id: C10
+    title: Coaching step overdue
+    condition: coaching-step-overdue
+    escalate_after: 3
+    escalate_to: head-of-training
+    steps:
+      - {id: remind, kind: notify, to: [coach], due_days: 0}
+      - {id: book, kind: propose, to: [coach], due_days: 0, button: propose-slots}
+  - id: C11
+    title: Train-the-trainer session missed
+    condition: not-connected
+    waiting_for: "the train-the-trainer cohort calendar (its sessions' dates) is not an input yet"
+    steps: []
+  - id: C12
+    title: Monthly CPD not logged
+    condition: cpd-not-logged
+    escalate_after: null   # development, not compliance: never escalates
+    steps:
+      - {id: remind, kind: notify, to: [instructor], due_days: 0, button: suggest-cpd}
+  - id: C13
+    title: A leaver
+    condition: not-connected
+    waiting_for: "the HRIS leaver feed (Workday through Sana) is not connected yet"
+    steps: []
+  - id: C14
+    title: An appeal awaiting a decision
+    condition: appeal-open
+    escalate_after: 0      # a legal or policy deadline: at once
+    escalate_to: head-of-training
+    steps:
+      - {id: tell, kind: notify, to: [head-of-training, dpo], due_days: 0}
+
+# Connectors, from Claude's connector directory (checked 2026-10-30). A url of null is set by IT at deployment
+# (the directory lists no public URL for it). Tool names are as the directory listed them; the kit pins them.
+connectors:
+  m365: {title: Microsoft 365, url: "https://microsoft365.mcp.claude.com/mcp"}
+  atlassian: {title: "Atlassian (Jira, Confluence)", url: "https://mcp.atlassian.com/v2/mcp"}
+  salesforce: {title: Salesforce, url: null}
+  workday: {title: Sana from Workday, url: null}
+  udemy: {title: Udemy Business, url: "https://api.udemy.com/mcp"}
+
+# Claude buttons. kind draft: Messages API, read-only connectors, returns JSON that fits contracts/drafts/<id>.schema.json;
+# a person sends it through the outbox. kind act: Managed Agents, read tools always_allow, write tools always_ask (the
+# presser approves each call); the session comes back as claude-session@1. Never: what the button must not do.
+model: claude-opus-5-5   # owner 2026-10-30: Opus 5.5 for every button
+buttons:
+  - id: draft-coaching-plan
+    title: Draft the triggered coaching plan
+    kind: draft
+    for: [coach]
+    effort: medium
+    reads: {m365: [find_meeting_availability, outlook_calendar_search, sharepoint_search], udemy: [search_courses, search_learning_paths]}
+    task: >-
+      From the coach's view of the instructor's record, propose the triggered coaching cycle: the focus domains, one
+      practice task per domain, three observation slots when both are free within ten working days, and one course per
+      domain from the catalogue.
+  - id: propose-slots
+    title: Propose slots
+    kind: draft
+    for: [lead, observer, coach]
+    effort: low
+    reads: {m365: [find_meeting_availability, outlook_calendar_search]}
+    task: Propose three slots when everyone the step names is free, within the step's window.
+  - id: find-cover
+    title: Find cover
+    kind: draft
+    for: [head-of-training, coordinator]
+    effort: medium
+    reads: {m365: [find_meeting_availability, outlook_calendar_search]}
+    task: >-
+      From the staffing match in the view, rank who could cover the session, with the reason for each, and draft the
+      message to the first choice. Never choose for the head: the override or cover is theirs.
+  - id: crm-task
+    title: Draft and open the account owner's task
+    kind: act
+    for: [head-of-training]
+    effort: medium
+    reads: {salesforce: [describe, discover, dispatch_readonly]}
+    writes: {salesforce: [dispatch]}
+    task: >-
+      Find the programme's opportunity and its owner, and open one task for the owner: what changes, why, and the dates.
+      Never put a score, a learner or an instructor's name in it.
+  - id: triage-lab
+    title: Triage the failing lab
+    kind: act
+    for: [lab-maintainer, head-of-training]
+    effort: medium
+    reads: {atlassian: [getJiraIssue, executeRead]}
+    writes: {atlassian: [createJiraIssue]}
+    task: >-
+      From the release status and the sessions on the lab, say which sessions are affected, and open one Jira issue
+      for the lab platform team if none is open for this lab and run.
+  - id: grader-ticket
+    title: Open the grader ticket
+    kind: act
+    for: [coordinator]
+    effort: low
+    reads: {atlassian: [getJiraIssue, executeRead]}
+    writes: {atlassian: [createJiraIssue]}
+    task: >-
+      Open one Jira issue for the grader team about this delivery's results, unless one is open: the delivery ref and
+      the counts only. Never a learner, a file name or a score.
+  - id: remind-owner
+    title: Remind the owner
+    kind: draft
+    for: [head-of-training]
+    effort: low
+    reads: {}
+    task: "Draft a short reminder to the source's owner: which source, when it last reported, and what it feeds."
+  - id: replacement-observer
+    title: Find a replacement observer
+    kind: draft
+    for: [coordinator]
+    effort: low
+    reads: {m365: [find_meeting_availability]}
+    task: >-
+      From the observer pool in the view, propose one replacement who is free before the audition, with the reason,
+      ready for `teachermodel audition replace`. The replacement is the coordinator's.
+  - id: suggest-cpd
+    title: Suggest activities
+    kind: draft
+    for: [instructor]
+    effort: low
+    reads: {udemy: [search_courses, search_learning_paths]}
+    task: Suggest three development activities for the instructor's lowest domains, from the catalogue.
+  - id: enrol-make-up
+    title: Enrol in the make-up session
+    kind: act
+    for: [coordinator]
+    effort: low
+    reads: {workday: [send_query_to_workday_plugin, get_workday_plugin_run_status]}
+    writes: {workday: [send_action_to_workday_plugin]}
+    task: >-
+      Enrol the participant in the next cohort's session of the course they missed, in Workday Learning. Learning
+      records only: never read or change anything about the person's employment.
+
+never:   # every button's system prompt carries these
+  - Never decide whether someone is cleared, moves level, is hired, or keeps their place; those are signed decisions.
+  - Never score teaching, read a recording to judge it, or estimate a score.
+  - Never say whether a chain's condition holds; it has been decided by a rule before you were asked.
+  - Never use or repeat more than the view you were given; ids only, never names.
+  - Never write to any system except through a tool call the person approves.

@@ -74,7 +74,9 @@ def _rows(ctx: Context, sql: str, *args: Any) -> list[sqlite3.Row]:
 
 def _sources(ctx: Context, owner: str | None = None) -> list[dict[str, Any]]:
     return [{"source": s.source.id, "title": s.source.title, "owner": s.source.owner, "state": s.state,
-             "last": s.last.isoformat() if s.last else None, "days_late": s.days_late}
+             "last": s.last.isoformat() if s.last else None, "days_late": s.days_late,
+             "limit_days": s.source.every_days + s.source.grace_days,
+             "age_days": (ctx.now - s.last).days if s.last else None}
             for s in ctx.freshness if (owner is None and s.state != "ok") or s.source.owner == owner]
 
 
@@ -101,26 +103,37 @@ def _clearance(ctx: Context, instructor: str, unit: str, mode: str) -> sqlite3.R
 
 
 def this_week(ctx: Context) -> dict[str, Any]:
-    triggers = []
+    open_triggers: dict[str, list[sqlite3.Row]] = {}  # instructor -> unanswered triggers, oldest first
     for t in _rows(ctx, "SELECT * FROM triggers ORDER BY at"):
         answered = _rows(ctx, "SELECT 1 FROM cycles WHERE instructor = ? AND intensity = 'triggered' AND opened >= ?",
                          t["instructor"], t["at"])
         if not answered:
-            recent = _rows(ctx, "SELECT * FROM outcomes WHERE instructor = ? ORDER BY delivered_on DESC LIMIT 5",
-                           t["instructor"])
-            triggers.append({"instructor": t["instructor"], "trigger": t["trigger"], "raised": t["at"][:10],
-                             "deliveries": [{"delivered_on": o["delivered_on"], "learners": o["learners_assessed"],
-                                             "score": o["score"], "baseline": o["baseline"]} for o in reversed(recent)]})
+            open_triggers.setdefault(t["instructor"], []).append(t)
+    triggers = []  # one decision per instructor: the latest trigger, with how many came before it unanswered
+    for instructor, raised in sorted(open_triggers.items(), key=lambda kv: kv[1][-1]["at"], reverse=True):
+        t = raised[-1]
+        recent = _rows(ctx, "SELECT * FROM outcomes WHERE instructor = ? ORDER BY delivered_on DESC LIMIT 5", instructor)
+        triggers.append({"instructor": instructor, "trigger": t["trigger"], "raised": t["at"][:10],
+                         "earlier": len(raised) - 1, "first_raised": raised[0]["at"][:10],
+                         "unit": recent[0]["unit"] if recent else None,
+                         "deliveries": [{"delivered_on": o["delivered_on"], "learners": o["learners_assessed"],
+                                         "score": o["score"], "baseline": o["baseline"]} for o in reversed(recent)]})
     auditions = [{"audition": aid, "unit": rec.get("unit"), "mode": rec.get("mode"),
                   "overall_mean": res.get("overall_mean"), "meets_bar": res.get("overall_meets_clearance_bar"),
-                  "domains_to_discuss": res.get("domains_to_discuss") or []}
+                  "domains_to_discuss": res.get("domains_to_discuss") or [],
+                  "domains": [{"domain": d["domain"], "scores": d["scores"], "average": d["average"]}
+                              for d in res.get("domains") or []],
+                  "clearance_bar": res.get("clearance_bar") or {}}
                  for aid, rec, res, _, decided in _auditions(ctx) if res and not decided]
-    lab_state = next((s.state for s in ctx.freshness if s.source.id == "release-check"), "not-connected")
+    release = next((s for s in ctx.freshness if s.source.id == "release-check"), None)
+    lab_state = release.state if release else "not-connected"
     horizon = ctx.on + timedelta(days=AHEAD_DAYS)
-    risks = []
+    risks, ahead = [], []
     for s in ctx.sessions:
         if s.status == "cancelled" or not (ctx.on <= s.start <= horizon):
             continue
+        ahead.append({"session": s.ref, "programme": s.programme, "lead": s.lead, "mode": s.mode, "lab": s.lab,
+                      "from": s.start.isoformat(), "to": s.end.isoformat()})
         held = _clearance(ctx, s.lead, s.unit, s.mode)
         if held is None:
             risks.append({"kind": "not-cleared", "session": s.ref, "instructor": s.lead, "on": s.start.isoformat()})
@@ -132,11 +145,22 @@ def this_week(ctx: Context) -> dict[str, Any]:
             risks.append({"kind": "lab-failing", "session": s.ref, "lab": s.lab, "on": s.start.isoformat()})
         elif s.lab and (lab_state != "ok" or ctx.labs.get(s.lab) != "passed"):
             risks.append({"kind": "lab-unchecked", "session": s.ref, "lab": s.lab, "on": s.start.isoformat()})
+    since = ctx.on - timedelta(days=DELIVERED_DAYS)
+    waiting = [{"kind": "observer-forms", "audition": aid, "forms_in": forms}
+               for aid, rec, res, forms, decided in _auditions(ctx) if rec.get("observers") and not res and not decided]
+    waiting += [{"kind": "results", "session": s.ref, "programme": s.programme, "ended": s.end.isoformat()}
+                for s in ctx.sessions if s.status != "cancelled" and since <= s.end < ctx.on
+                and not (ctx.received.get(s.ref) or {}).get("received")  # the dry run shows some in: not waiting
+                and not _rows(ctx, "SELECT 1 FROM outcomes WHERE delivery_ref = ?", s.ref)]
     soon = (ctx.on + timedelta(days=60)).isoformat()
     return {
         "as_of": ctx.now.isoformat(),
         "decisions": {"quality_triggers": triggers, "auditions": auditions},
         "risks": risks,
+        "ahead": sorted(ahead, key=lambda a: (a["from"], a["session"])),
+        "release_check": {"state": lab_state, "last": release.last.isoformat() if release and release.last else None,
+                          "due": release.due.isoformat() if release and release.due else None},
+        "waiting": waiting,
         "sources": _sources(ctx),
         "fine": {"instructors_active": _rows(ctx, "SELECT count(*) FROM instructors WHERE status = 'active'")[0][0],
                  "clearances_valid_60_days": _rows(ctx, "SELECT count(*) FROM clearances WHERE expires > ?", soon)[0][0]},
@@ -169,7 +193,8 @@ def coordinator_board(ctx: Context) -> dict[str, Any]:
     for aid, rec, res, forms, decided in _auditions(ctx):
         stage = ("decided" if decided else "awaiting decision" if res else
                  f"forms {forms} of 2" if rec.get("observers") else "needs observers")
-        auditions.append({"audition": aid, "stage": stage, "forms_in": forms})
+        auditions.append({"audition": aid, "stage": stage, "forms_in": forms,
+                          "replaced": len(rec.get("replaced") or [])})
     return {"as_of": ctx.now.isoformat(), "deliveries": deliveries, "course": grid, "auditions": auditions,
             "sources": _sources(ctx, owner="coordinator")}
 
@@ -179,12 +204,15 @@ def coordinator_board(ctx: Context) -> dict[str, Any]:
 
 def my_record(ctx: Context, instructor: str) -> dict[str, Any]:
     ahead = []
+    fresh = next((s.state for s in ctx.freshness if s.source.id == "release-check"), None) == "ok"
     for s in ctx.sessions:
         if s.status == "cancelled" or s.end < ctx.on or instructor not in s.people:
             continue
         role = "lead" if s.lead == instructor else "observer" if s.observer == instructor else "co"
         ahead.append({"session": s.ref, "programme": s.programme, "unit": s.unit, "mode": s.mode,
-                      "from": s.start.isoformat(), "to": s.end.isoformat(), "role": role, "lead": s.lead})
+                      "from": s.start.isoformat(), "to": s.end.isoformat(), "role": role, "lead": s.lead,
+                      "observer": s.observer, "status": s.status, "lab": s.lab,
+                      "lab_state": (ctx.labs.get(s.lab, "unchecked") if fresh else "unchecked") if s.lab else None})
     minimum = int(ctx.rules.get("quality", {}).get("min_learners_for_metric", 15))
     observations = []
     for o in _rows(ctx, "SELECT id, at FROM observations WHERE instructor = ? ORDER BY at", instructor):

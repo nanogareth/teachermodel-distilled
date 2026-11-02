@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/drafts/draft-coaching-plan@1",
+  "title": "Draft content: draft-coaching-plan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "focus",
+    "slots",
+    "message"
+  ],
+  "properties": {
+    "focus": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "domain",
+          "practice_task",
+          "course"
+        ],
+        "properties": {
+          "domain": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "practice_task": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 400
+          },
+          "course": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "maxLength": 200
+          }
+        },
+        "description": "One focus domain"
+      }
+    },
+    "slots": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "start",
+          "end"
+        ],
+        "properties": {
+          "start": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}"
+          },
+          "end": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}"
+          }
+        }
+      }
+    },
+    "message": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1200
+    }
+  },
+  "description": "The triggered coaching plan for the coach to send"
+}

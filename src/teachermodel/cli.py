@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -47,6 +47,9 @@ def _build_parser() -> argparse.ArgumentParser:
     r.add_argument("path", type=Path)
     q = sub.add_parser("check-questions", help="check a train-the-trainer session 2 question set against its unit")
     q.add_argument("path", type=Path)
+    cd = sub.add_parser("check-draft", help="check a Claude button's draft, a session record or a card's command "
+                        "(draft@1, claude-session@1, command@1) against its contract and button (decision 0029)")
+    cd.add_argument("path", type=Path)
     fl = sub.add_parser("check-failure-log", help="check a train-the-trainer session 3 failure log against the lab")
     fl.add_argument("path", type=Path)
     fl.add_argument("--catalogue", type=Path, required=True,
@@ -167,6 +170,10 @@ def _build_parser() -> argparse.ArgumentParser:
     sim.add_argument("--weeks", type=int, default=26, help="how many weeks to simulate (default 26)")
     sim.add_argument("--end", default=None, help="the last simulated day, YYYY-MM-DD (default: today)")
     sim.add_argument("--reset", action="store_true", help="replace a previous simulation in --store")
+    ck = sub.add_parser("claude-kit", help="write the Claude buttons' deployment files (agents, environment, drafting "
+                        "requests, prompts, manifest) from standards/chains.yaml (decision 0029)")
+    ck.add_argument("--out", type=Path, required=True)
+    ck.add_argument("--connector", action="append", default=[], help="name=https://... for a connector URL IT sets")
     ho = _store_parser(sub, "handoff", "render the expert-to-session handoff for a unit and list what it still lacks")
     ho.add_argument("--unit", required=True, help="sl:unit/<slug>@<version>")
     pp = _store_parser(sub, "paper", "write the printable run sheet and rubric for a unit (paper fallback, decision 0022)")
@@ -392,10 +399,22 @@ def _audition(private: Path, args: argparse.Namespace) -> int:
     return 0
 
 
+def _when(text: str | None, store: Path | None = None) -> datetime:
+    """--now as an aware time; without it, now (UTC), or for a simulated store the morning after its last day."""
+    if text:
+        when = datetime.fromisoformat(text)
+        return when if when.tzinfo else when.replace(tzinfo=timezone.utc)
+    if store is not None and (store / "events" / "events.jsonl").is_file():
+        lines = (store / "events" / "events.jsonl").read_text(encoding="utf-8").splitlines()
+        last = max(json.loads(line)["at"] for line in lines if line.strip())
+        return datetime.fromisoformat(last[:10] + "T07:00:00+00:00") + timedelta(days=1)
+    return datetime.now(timezone.utc).replace(microsecond=0)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
-    if args.cmd in ("validate", "verify-events", "check-roster", "check-questions", "check-failure-log"):
+    if args.cmd in ("validate", "verify-events", "check-roster", "check-questions", "check-failure-log", "check-draft"):
         if args.cmd == "validate":
             errors = standards.check_standards()
         elif args.cmd == "verify-events":
@@ -404,6 +423,13 @@ def main(argv: list[str] | None = None) -> int:
             from . import course
 
             errors = course.question_set_errors(yaml.safe_load(args.path.read_text(encoding="utf-8")))
+        elif args.cmd == "check-draft":
+            from . import feeds
+
+            try:
+                errors = feeds.problems(json.loads(args.path.read_text(encoding="utf-8")))
+            except ValueError as exc:
+                errors = [f"{args.path.name}: not JSON ({exc})"]
         elif args.cmd == "check-failure-log":
             from . import course
 
@@ -435,6 +461,18 @@ def main(argv: list[str] | None = None) -> int:
               f"{bar['exact_agreement_share']:.0%} exact; this is not a calibration")
         if args.out:
             args.out.write_text(yaml.safe_dump({"recordings": rows}, sort_keys=False), encoding="utf-8", newline="\n")
+        return 0
+
+    if args.cmd == "claude-kit":
+        from . import claudekit
+
+        try:
+            overrides = dict(c.split("=", 1) for c in args.connector)
+            changed = claudekit.write(args.out, overrides)
+        except (claudekit.KitError, ValueError) as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 1
+        print(f"claude-kit: {len(changed)} file(s) written to {args.out}")
         return 0
 
     if args.cmd == "dev-simulate":

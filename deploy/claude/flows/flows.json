@@ -1,0 +1,47 @@
+{
+  "about": "Power Automate flows for the Claude buttons (decision 0029). A specification for IT to build in the tenant, under the programme account: the store cannot reach the tenant, so building them is the one manual step. Each flow names its trigger, its steps and the contract it writes. Nothing here holds a secret: connector tokens come from Key Vault at run time.",
+  "flows": [
+    {
+      "name": "tm-post-card",
+      "trigger": {"type": "HTTP request received", "body": {"to": "tm id", "card": "Adaptive Card JSON"}},
+      "steps": [
+        "Look up the Teams user for the tm id in the programme's people list (SharePoint list kept by the head of training).",
+        "Post adaptive card and wait for a response (Teams), to that user.",
+        "If the card came from the relay (its data has session_id): HTTP POST the response data to the relay's /answer.",
+        "Otherwise: create command@1 ({action_id, choice, by, at, fields}) as a file in the programme library's inbox folder."
+      ],
+      "writes": ["tm:contract/command@1"],
+      "called_by": ["the relay (approval cards)", "outbox delivery (G10, later)", "tm-drafting-button (draft cards)"]
+    },
+    {
+      "name": "tm-drafting-button",
+      "trigger": {"type": "a Claude button pressed on a card", "data": {"button": "id", "action_id": "16 hex", "by": "tm id", "projection": "the card's view"}},
+      "steps": [
+        "Read deploy/claude/kit/drafting/<button>.json (published to the programme library with the kit).",
+        "Replace {{projection}} with the card's view as JSON, and each {{token:<server>}} with the presser's token for that connector from Key Vault.",
+        "HTTP POST https://api.anthropic.com/v1/messages with headers x-api-key (Key Vault), the file's anthropic-version and anthropic-beta values; body = the file's body.",
+        "If stop_reason is refusal: post a card saying Claude could not draft this, with the manual path; stop.",
+        "Parse the first text block as JSON. Create draft@1 ({button, action_id, drafted_at, model, request_id, content}) in the inbox folder.",
+        "Call tm-post-card with a card showing the draft and Send / Edit / Discard."
+      ],
+      "writes": ["tm:contract/draft@1"]
+    },
+    {
+      "name": "tm-acting-button",
+      "trigger": {"type": "a Claude button pressed on a card", "data": {"button": "id", "action_id": "16 hex", "by": "tm id", "projection": "the card's view"}},
+      "steps": [
+        "Look up the presser's vault id (one per person, created when they first sign in to the connectors).",
+        "HTTP POST the relay's /press with {button, action_id, presser: by, projection, vault_id}.",
+        "Reply on the card: Claude is working; each change it wants to make will come to you to approve."
+      ],
+      "writes": []
+    },
+    {
+      "name": "tm-store-record",
+      "trigger": {"type": "HTTP request received", "body": "claude-session@1"},
+      "steps": ["Create the body as <session_id>.json in the programme library's inbox folder."],
+      "writes": ["tm:contract/claude-session@1"],
+      "called_by": ["the relay, when a session ends"]
+    }
+  ]
+}

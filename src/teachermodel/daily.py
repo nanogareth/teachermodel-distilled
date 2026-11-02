@@ -1,8 +1,7 @@
 """The deterministic daily job (owner, 2026-10-27): `teachermodel daily`, its development toggle and its Windows task.
 
-`daily` imports any feed files dropped in the store's `inbox/` (feeds.py, decision 0028), ticks the store and appends
-one line to `logs/daily.log` in it. With `dev_autosign: true` in the settings (a
-pilot store only, settings@1) it runs `dev-autosign` instead, which ticks before and after it signs. No model runs here:
+`daily` imports any feed files dropped in the store's `inbox/` (feeds.py, decision 0028), ticks the store and logs each to `logs/daily.log`, the tick's line last. With
+`dev_autosign: true` in the settings (a pilot store only, settings@1) it runs `dev-autosign` instead, which ticks before and after it signs. No model runs here:
 with `TEACHERMODEL_M365_DRIVER=graph` in the environment it first reads the sign-off mailbox through the Graph driver
 (graph.py) and ingests the receipt. Without it the mailbox is read by the connector skill in a Claude session (the
 desktop task `teachermodel-mailbox-read`), a separate step.

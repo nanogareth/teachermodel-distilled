@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/command@1",
+  "title": "A person's answer to a card (written by the Power Automate flow; arrives through inbox/)",
+  "description": "Decision 0029. Send, edit or discard a draft; approve or hold an outbox action during its shadow period. The identity comes from Teams. Edited fields replace the draft's, and must still fit its schema.",
+  "type": "object",
+  "required": ["schema", "action_id", "choice", "by", "at"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/command@1"},
+    "action_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+    "choice": {"enum": ["send", "edit", "discard", "approve", "hold"]},
+    "by": {"type": "string", "pattern": "^tm:(person|instructor)/[a-z0-9][a-z0-9-]*$"},
+    "at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "fields": {"type": "object"}
+  }
+}

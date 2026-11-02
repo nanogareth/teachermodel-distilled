@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tm:contract/draft@1",
+  "title": "A Claude button's draft (arrives through inbox/)",
+  "description": "Decision 0029. The envelope around what a drafting button returned: which button, for which outbox action, when and from which model. content must also fit contracts/drafts/<button>.schema.json; teachermodel check-draft checks both. Ids only.",
+  "type": "object",
+  "required": ["schema", "button", "action_id", "drafted_at", "model", "content"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": {"const": "tm:contract/draft@1"},
+    "button": {"type": "string", "pattern": "^[a-z][a-z0-9-]*$"},
+    "action_id": {"type": "string", "pattern": "^[0-9a-f]{16}$"},
+    "drafted_at": {"type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}"},
+    "model": {"type": "string", "minLength": 1, "description": "The model, or 'interactive session' when drafted by hand in development"},
+    "request_id": {"type": "string", "description": "The API request id, in the deployment"},
+    "content": {"type": "object"}
+  }
+}

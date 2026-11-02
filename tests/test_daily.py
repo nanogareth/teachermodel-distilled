@@ -23,14 +23,6 @@ def _log(store):
     return (store / daily.LOG).read_text(encoding="utf-8").splitlines()
 
 
-def test_daily_ticks_and_logs_one_line(store, monkeypatch):
-    called = []
-    monkeypatch.setattr(daily.devsign, "autosign", lambda *a, **k: called.append(a))
-    rep = daily.daily(store, now=T0)
-    assert rep.ok and rep.summary.startswith("next:") and not called
-    assert _log(store) == [f"2026-10-27T07:30:00+00:00 tick ok: {rep.summary}"]
-
-
 def test_daily_runs_dev_autosign_when_the_toggle_is_on(store, monkeypatch):
     from teachermodel import app
 

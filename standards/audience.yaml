@@ -12,9 +12,11 @@ roles:
       this-week: "*"
       coordinator-board: "*"
       my-record: "*"
+      outbox: "*"            # decision 0029: what the chains would send; the head of training only
   coordinator:
     surfaces:
       coordinator-board:
+        - as_of
         - deliveries.session
         - deliveries.programme
         - deliveries.date
@@ -26,6 +28,7 @@ roles:
         - auditions.audition
         - auditions.stage
         - auditions.forms_in
+        - auditions.replaced
         - sources
     never: [score, baseline, mean, pass, disagree, discuss, outcome]
   instructor:

@@ -1,0 +1,145 @@
+{
+  "anthropic-version": "2026-10-21",
+  "anthropic-beta": "mcp-client-2026-09-15,server-side-fallback-2026-07-01",
+  "body": {
+    "model": "claude-opus-5-5",
+    "max_tokens": 16000,
+    "system": [
+      {
+        "type": "text",
+        "text": "You are the \"Draft the triggered coaching plan\" button for a technical training function.\n\nFrom the coach's view of the instructor's record, propose the triggered coaching cycle: the focus domains, one practice task per domain, three observation slots when both are free within ten working days, and one course per domain from the catalogue.\n\nYou are given one view as JSON: the part of the record the person who pressed this button may see. Use it and the connector tools you have, and nothing else.\n\nRules:\n- Never decide whether someone is cleared, moves level, is hired, or keeps their place; those are signed decisions.\n- Never score teaching, read a recording to judge it, or estimate a score.\n- Never say whether a chain's condition holds; it has been decided by a rule before you were asked.\n- Never use or repeat more than the view you were given; ids only, never names.\n- Never write to any system except through a tool call the person approves.\n- Return only the JSON your output format asks for. A person reads it, can change it, and sends it themselves.\n- Write in plain words and short sentences. Use the ids in the view, never names.\n",
+        "cache_control": {
+          "type": "ephemeral"
+        }
+      }
+    ],
+    "output_config": {
+      "effort": "medium",
+      "format": {
+        "type": "json_schema",
+        "schema": {
+          "title": "Draft content: draft-coaching-plan",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "focus",
+            "slots",
+            "message"
+          ],
+          "properties": {
+            "focus": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "domain",
+                  "practice_task",
+                  "course"
+                ],
+                "properties": {
+                  "domain": {
+                    "type": "string"
+                  },
+                  "practice_task": {
+                    "type": "string"
+                  },
+                  "course": {
+                    "anyOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "description": "One focus domain"
+              }
+            },
+            "slots": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "start",
+                  "end"
+                ],
+                "properties": {
+                  "start": {
+                    "type": "string"
+                  },
+                  "end": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "description": "The triggered coaching plan for the coach to send"
+        }
+      }
+    },
+    "fallbacks": "default",
+    "messages": [
+      {
+        "role": "user",
+        "content": "{{projection}}"
+      }
+    ],
+    "mcp_servers": [
+      {
+        "type": "url",
+        "name": "m365",
+        "url": "https://microsoft365.mcp.claude.com/mcp",
+        "authorization_token": "{{token:m365}}"
+      },
+      {
+        "type": "url",
+        "name": "udemy",
+        "url": "https://api.udemy.com/mcp",
+        "authorization_token": "{{token:udemy}}"
+      }
+    ],
+    "tools": [
+      {
+        "type": "mcp_toolset",
+        "mcp_server_name": "m365",
+        "default_config": {
+          "enabled": false
+        },
+        "configs": {
+          "find_meeting_availability": {
+            "enabled": true
+          },
+          "outlook_calendar_search": {
+            "enabled": true
+          },
+          "sharepoint_search": {
+            "enabled": true
+          }
+        }
+      },
+      {
+        "type": "mcp_toolset",
+        "mcp_server_name": "udemy",
+        "default_config": {
+          "enabled": false
+        },
+        "configs": {
+          "search_courses": {
+            "enabled": true
+          },
+          "search_learning_paths": {
+            "enabled": true
+          }
+        }
+      }
+    ]
+  }
+}

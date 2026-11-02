@@ -23,6 +23,8 @@ teachermodel revoke-page --step <id> [--subject <uri>]  # a page to revoke an ap
 teachermodel gates                 # phase gates and acceptance criteria computed from the store (read only)
 teachermodel index                 # rebuild the disposable SQLite index (index/teachermodel.sqlite)
 teachermodel views                 # index + read views in views/: clearance matrix, coaching logs, quality review, records
+teachermodel check-draft <file>    # a Claude button's draft, a session record or a card's command against its contract (0029)
+teachermodel claude-kit --out deploy/claude/kit [--connector name=url]  # the Claude buttons' deployment files from standards/chains.yaml (0029)
 teachermodel history --clearance <uri>  # a clearance's full history from the log alone
 teachermodel audit-export --quarter <YYYYQn>  # a quarter's audit samples as JSON (exports/)
 teachermodel audition new|assign|score|status|result|decide|carry  # a candidate's audition on the rubric, kept apart (0025)

@@ -244,7 +244,7 @@ def test_daily_reads_through_graph_before_it_ticks_when_the_driver_is_graph(worl
         monkeypatch.setenv(k, v)
     rep = daily.daily(private, now=T0 + timedelta(hours=1), root=root)
     log = (private / daily.LOG).read_text(encoding="utf-8").splitlines()
-    assert log[0].endswith("graph-read ok: graph-read: 1 op(s), 0 failed") and " tick ok: " in log[1]
+    assert log[0].endswith("graph-read ok: graph-read: 1 op(s), 0 failed") and " tick ok: " in log[-1]
     assert rep.ok and (STEP_VERIFIED, PROGRAMME) not in due_ids(private, root, T0.date())
 
 
@@ -254,7 +254,7 @@ def test_daily_logs_a_failed_graph_read_and_still_ticks(world, monkeypatch):
     monkeypatch.setenv(graph.ENV_DRIVER, "graph")  # no tenant, client or secret configured
     rep = daily.daily(private, now=T0 + timedelta(hours=1), root=root)
     log = (private / daily.LOG).read_text(encoding="utf-8").splitlines()
-    assert "graph-read FAILED" in log[0] and "TEACHERMODEL_GRAPH_TENANT" in log[0] and " tick ok: " in log[1]
+    assert "graph-read FAILED" in log[0] and "TEACHERMODEL_GRAPH_TENANT" in log[0] and " tick ok: " in log[-1]
     assert not rep.ok
 
 
