@@ -7,15 +7,18 @@ quasi-experiments, multi-site or large-sample reliability studies; **weak** = si
 self-report, experience reports, company claims. Rule: only **strong** findings change
 `standards/` (decision 0002).
 
-## Adopted (strong)
+## Adopted
 
-| Finding | Population | Used in |
-| --- | --- | --- |
-| Coaching: +0.49 SD on practice, +0.18 SD on achievement, 60 causal studies; virtual comparable; smaller in large programmes ([Kraft, Blazar & Hogan 2018](https://scholar.harvard.edu/files/mkraft/files/kraft_blazar_hogan_2018_teacher_coaching.pdf)) | K-12, literacy-heavy | W7, `coaching` rules |
-| Single observer on single lesson: reliability ~.27–.45; a second observer beats a second lesson by the same observer; 15-minute observation ~60% of full reliability in <1/3 time ([Ho & Kane 2013](https://files.eric.ed.gov/fulltext/ED540957.pdf)) | K-12 (MET, ~7,500 videos) | W4, W6, `clearance`, `audit`, `quality` rules |
-| Observer certification on pre-scored video, audit a subset ([MET, Seeing it clearly](https://usprogram.gatesfoundation.org/-/media/dataimport/resources/pdf/2016/11/met-seeing-it-clearly-v2.pdf)) | K-12 | W5, W6 |
-| Expertise reversal: support that helps novices harms learners with more prior knowledge; asymmetric (Kalyuga, Ayres, Chandler & Sweller 2003; [2025 meta-analysis](https://www.sciencedirect.com/science/article/pii/S0959475225000660)) | Broad | `prior-knowledge` domain, module `pre_check` |
-| Peer instruction halved fail rates in four CS courses; learning occurs in discussion ([Porter, Bailey Lee & Simon 2013](https://neverworkintheory.org/2013/03/08/halving-fail-rates-using-peer-instruction.html)) | University CS | `conceptual-questioning` domain, module `misconceptions` |
+Adopted as strong on 2026-10-23. Re-graded against the definition above on 2026-11-03 (owner): two of the five are strong. The
+observation, calibration and audit rules rest on the other three, so they do not yet meet the rule in decision 0002.
+
+| Finding | Population | Grade | Used in |
+| --- | --- | --- | --- |
+| Coaching: +0.49 SD on practice, +0.18 SD on achievement, 60 causal studies; virtual comparable; smaller in large programmes ([Kraft, Blazar & Hogan 2018](https://scholar.harvard.edu/files/mkraft/files/kraft_blazar_hogan_2018_teacher_coaching.pdf)) | K-12, literacy-heavy | Strong: meta-analysis | W7, `coaching` rules |
+| Single observer on single lesson: reliability ~.27–.45; a second observer beats a second lesson by the same observer; 15-minute observation ~60% of full reliability in <1/3 time ([Ho & Kane 2013](https://files.eric.ed.gov/fulltext/ED540957.pdf)) | K-12: videos of 67 teachers in one district | Moderate: reliability study | W4, W6, `clearance`, `audit`, `quality` rules |
+| Observer certification on pre-scored video, audit a subset ([MET, Seeing it clearly](https://usprogram.gatesfoundation.org/-/media/dataimport/resources/pdf/2016/11/met-seeing-it-clearly-v2.pdf)) | K-12 | Not graded: a practice guide, not a study | W5, W6 |
+| Expertise reversal: support that helps novices harms learners with more prior knowledge; asymmetric (Kalyuga, Ayres, Chandler & Sweller 2003; [2025 meta-analysis](https://www.sciencedirect.com/science/article/pii/S0959475225000660)) | Broad | Strong: meta-analysis | `prior-knowledge` domain, module `pre_check` |
+| Peer instruction halved fail rates in four CS courses; learning occurs in discussion ([Porter, Bailey Lee & Simon 2013](https://neverworkintheory.org/2013/03/08/halving-fail-rates-using-peer-instruction.html)) | University CS | Moderate: non-randomised comparison | `conceptual-questioning` domain, module `misconceptions` |
 
 ## Deferred (below strong)
 
