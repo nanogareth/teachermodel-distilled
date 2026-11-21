@@ -1,4 +1,4 @@
-schema: portfolio/project@1
+schema: portfolio/project@2
 id: teachermodel-distilled
 name: "teachermodel-distilled"
 aliases: ["nanogareth/teachermodel-distilled", "teachermodel-public"]
